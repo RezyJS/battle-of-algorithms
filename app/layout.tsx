@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { FieldContextProvider } from '@/components/Field/FieldContext';
+import { PlayerContextProvider } from '@/components/PlayerContext';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -28,7 +29,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased w-dvw h-dvh m-0 p-0`}
       >
-        <FieldContextProvider>{children}</FieldContextProvider>
+        <FieldContextProvider>
+          <PlayerContextProvider>{children}</PlayerContextProvider>
+        </FieldContextProvider>
       </body>
     </html>
   );
