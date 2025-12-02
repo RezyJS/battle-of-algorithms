@@ -1,0 +1,43 @@
+import { CellType, TField } from './types';
+
+export const CellWidth = 'w-[60px]';
+export const CellHeight = 'h-[60px]';
+export const CellOffset = '68px';
+
+export const testField: TField = [
+  [
+    { type: CellType.Wall },
+    { type: CellType.Wall },
+    { type: CellType.Wall },
+    { type: CellType.Wall },
+    { type: CellType.Wall },
+  ],
+  [
+    { type: CellType.Wall },
+    { type: CellType.ControlPointUnclaimed },
+    { type: CellType.Ground },
+    { type: CellType.Ground },
+    { type: CellType.Wall },
+  ],
+  [
+    { type: CellType.Wall },
+    { type: CellType.Ground },
+    { type: CellType.Ground },
+    { type: CellType.Ground },
+    { type: CellType.Wall },
+  ],
+  [
+    { type: CellType.Wall },
+    { type: CellType.Ground },
+    { type: CellType.Ground },
+    { type: CellType.ControlPointUnclaimed },
+    { type: CellType.Wall },
+  ],
+  [
+    { type: CellType.Wall },
+    { type: CellType.Wall },
+    { type: CellType.Wall },
+    { type: CellType.Wall },
+    { type: CellType.Wall },
+  ],
+];
