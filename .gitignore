@@ -23,6 +23,9 @@
 # misc
 .DS_Store
 *.pem
+__pycache__/
+*.pyc
+.playwright-cli/
 
 # debug
 npm-debug.log*
@@ -35,6 +38,9 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# python
+backend/.venv/
 
 # typescript
 *.tsbuildinfo

@@ -71,6 +71,7 @@ interface GameState {
   reset: () => void;
   stepForward: () => void;
   setScript: (index: number, script: string) => void;
+  setScriptsPair: (leftScript: string, rightScript: string) => void;
   setIsRunning: (running: boolean) => void;
   setUseRandomMap: (value: boolean) => void;
   setSpeedIndex: (index: number) => void;
@@ -366,6 +367,12 @@ export const useGameStore = create<GameState>((set, get) => {
         const scripts = [...state.scripts];
         scripts[index] = script;
         return { scripts };
+      });
+    },
+
+    setScriptsPair: (leftScript, rightScript) => {
+      set({
+        scripts: [leftScript, rightScript],
       });
     },
 

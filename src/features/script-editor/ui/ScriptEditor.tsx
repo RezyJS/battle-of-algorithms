@@ -72,7 +72,7 @@ export function ScriptEditor({
         />
       </div>
       <p className="text-xs text-gray-500 text-right">
-        Автосохранение — изменения применяются мгновенно
+        Сохранение и отправка выполняются кнопками сверху
       </p>
     </div>
   );

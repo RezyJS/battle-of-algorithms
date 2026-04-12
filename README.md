@@ -1,36 +1,140 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Battle of Algorithms
 
-## Getting Started
+Проект состоит из:
 
-First, run the development server:
+- frontend на `Next.js`;
+- backend на `FastAPI`;
+- `PostgreSQL` для данных приложения;
+- `Keycloak` для auth и ролей.
+
+## Dev порты
+
+- frontend: `http://localhost:3000`
+- backend: `http://localhost:8000`
+- backend docs: `http://localhost:8000/docs`
+- keycloak: `http://localhost:8080`
+- postgres: `localhost:5432`
+
+## Что установить
+
+- `Node.js 20+`
+- `pnpm`
+- `Python 3.14+`
+- `uv` или `pip`
+- `Docker Desktop`
+- `docker-compose`
+
+## Подготовка env
+
+Frontend:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.local.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Backend:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp backend/.env.example backend/.env
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Запуск инфраструктуры
 
-## Learn More
+Перед запуском убедись, что `Docker Desktop` открыт и docker daemon запущен.
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+make infra-up
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Или без `make`:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+docker-compose -f infra/docker-compose.yml up -d
+```
 
-## Deploy on Vercel
+Локальные учётные данные dev-окружения:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Postgres DB: `battle_of_algorithms`
+- Postgres user: `boa`
+- Postgres password: `boa`
+- Keycloak admin: `admin`
+- Keycloak admin password: `admin`
+- Keycloak URL: `http://localhost:8080`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Тестовые пользователи Keycloak:
+
+- `dev-user` / `DevPass123!`
+- `dev-moderator` / `DevPass123!`
+- `dev-admin` / `DevPass123!`
+
+## Запуск frontend
+
+```bash
+pnpm dev
+```
+
+## Запуск backend
+
+Через `uv`:
+
+```bash
+cd backend
+uv sync
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Через `venv` и `pip`:
+
+```bash
+cd backend
+python3.14 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+## Seed локальных данных
+
+После миграций можно заполнить БД тестовыми данными:
+
+```bash
+make backend-seed
+```
+
+Что создаётся:
+
+- `seed-moderator`
+- `seed-alice`
+- `seed-bob`
+- по одной `approved` отправке для `seed-alice` и `seed-bob`
+- активный бой `Seed Alice vs Seed Bob`
+
+## Backend структура
+
+```text
+backend/
+  app/
+    api/
+    main.py
+    config.py
+  alembic/
+  pyproject.toml
+```
+
+## Что уже подготовлено на этапе 0
+
+- `infra/docker-compose.yml`
+- `.env.local.example`
+- `backend/.env.example`
+- backend-скелет на `FastAPI`
+- `Makefile` с базовыми командами
+- [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md)
+
+## Следующий ручной шаг
+
+После первого запуска контейнеров нужно в Keycloak создать:
+
+- realm `battle-of-algorithms`
+- clients `frontend` и `backend`
+- roles `user`, `moderator`, `admin`
+- тестовых пользователей под все роли

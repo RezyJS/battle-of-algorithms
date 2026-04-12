@@ -1,15 +1,13 @@
 @import 'tailwindcss';
 
 .number-input {
-  appearance: auto;
+  appearance: textfield;
+  -moz-appearance: textfield;
   color-scheme: dark;
 }
 
 .number-input::-webkit-outer-spin-button,
 .number-input::-webkit-inner-spin-button {
-  -webkit-appearance: auto;
+  -webkit-appearance: none;
   margin: 0;
-  opacity: 1;
-  filter: invert(1);
-  cursor: pointer;
 }

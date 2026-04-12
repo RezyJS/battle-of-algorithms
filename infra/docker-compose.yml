@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: boa-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: battle_of_algorithms
+      POSTGRES_USER: boa
+      POSTGRES_PASSWORD: boa
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U boa -d battle_of_algorithms"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2
+    container_name: boa-keycloak
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: boa
+      KC_DB_PASSWORD: boa
+      KC_HOSTNAME: localhost
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    command: start-dev
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
