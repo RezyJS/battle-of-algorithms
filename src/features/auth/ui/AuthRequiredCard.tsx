@@ -13,20 +13,20 @@ export function AuthRequiredCard({
   const registerHref = `/api/auth/register?returnTo=${encodeURIComponent(returnTo)}`;
 
   return (
-    <div className="max-w-md mx-auto rounded-2xl border border-white/10 bg-gray-900/70 p-8 text-center">
-      <h1 className="text-2xl font-semibold text-white">{title}</h1>
-      <p className="mt-3 text-sm text-gray-400">{description}</p>
+    <div className="max-w-md mx-auto rounded-2xl border border-slate-200 bg-white/85 p-8 text-center shadow-sm">
+      <h1 className="text-2xl font-semibold text-slate-950">{title}</h1>
+      <p className="mt-3 text-sm text-slate-600">{description}</p>
 
       <div className="mt-6 flex flex-col gap-3">
         <Link
           href={loginHref}
-          className="flex h-11 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-medium text-white transition-colors hover:bg-indigo-500"
+          className="flex h-11 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-medium text-white transition-colors hover:bg-indigo-500 shadow-sm"
         >
           Войти
         </Link>
         <Link
           href={registerHref}
-          className="flex h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-medium text-gray-200 transition-colors hover:bg-white/5"
+          className="flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
         >
           Регистрация
         </Link>

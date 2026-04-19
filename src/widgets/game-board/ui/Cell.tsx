@@ -18,15 +18,16 @@ interface CellProps {
 }
 
 export function getCellStyle(content: string): string {
-  if (content === 'wall') return 'bg-gray-800 border-gray-700 shadow-inner';
-  if (content === 'spawn1') return 'bg-red-950/60 border-red-700/60';
-  if (content === 'spawn2') return 'bg-emerald-950/60 border-emerald-700/60';
-  if (content === 'key_taken') return 'bg-gray-800/40 border-gray-700/30';
-  if (content.startsWith('key')) return 'bg-amber-950/60 border-amber-700/50';
-  if (content === 'exit') return 'bg-violet-950/60 border-violet-700/50';
-  if (content.includes('🔴')) return 'bg-red-900/40 border-red-600/50';
-  if (content.includes('🟢')) return 'bg-emerald-900/40 border-emerald-600/50';
-  return 'bg-gray-900/50 border-gray-800/50';
+  if (content === 'wall') return 'bg-slate-300 border-slate-400 shadow-inner';
+  if (content === 'spawn1') return 'bg-rose-100 border-rose-300';
+  if (content === 'spawn2') return 'bg-emerald-100 border-emerald-300';
+  if (content === 'key_taken') return 'bg-amber-50 border-amber-200';
+  if (content.startsWith('key')) return 'bg-amber-100 border-amber-300';
+  if (content === 'exit') return 'bg-violet-100 border-violet-300';
+  if (content.includes('🔴') && content.includes('🟢')) return 'bg-orange-100 border-orange-300';
+  if (content.includes('🔴')) return 'bg-rose-100 border-rose-300';
+  if (content.includes('🟢')) return 'bg-emerald-100 border-emerald-300';
+  return 'bg-white border-slate-200';
 }
 
 export function getCellDisplay(content: string): string {

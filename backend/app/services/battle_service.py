@@ -12,6 +12,7 @@ from app.models.enums import BattleStatus
 from app.models.enums import SubmissionStatus
 from app.models.user import User
 from app.schemas.battle import ActiveBattleResponse, ArenaUserOption, SetActiveBattleRequest
+from app.schemas.battle import UpdateActiveBattleConfigRequest
 
 
 def list_arena_users(db: Session) -> list[ArenaUserOption]:
@@ -90,6 +91,7 @@ def get_active_battle(db: Session) -> ActiveBattleResponse | None:
         right_submission_version=right_code_submission.version if right_code_submission else None,
         left_code=left_code_submission.code if left_code_submission else None,
         right_code=right_code_submission.code if right_code_submission else None,
+        map_config=battle.map_config,
         started_at=battle.started_at,
         updated_at=battle.updated_at,
     )
@@ -145,6 +147,7 @@ def set_active_battle(
         right_player_id=payload.right_player_id,
         left_submission_id=left_submission.id,
         right_submission_id=right_submission.id,
+        map_config=payload.map_config,
         started_at=datetime.now(timezone.utc),
         created_by=payload.moderator_user_id,
     )
@@ -161,7 +164,40 @@ def set_active_battle(
                 "right_player_id": payload.right_player_id,
                 "left_submission_id": left_submission.id,
                 "right_submission_id": right_submission.id,
+                "map_config": payload.map_config,
             },
+            actor_user_id=payload.moderator_user_id,
+        )
+    )
+
+    db.commit()
+    db.refresh(battle)
+
+    return battle
+
+
+def update_active_battle_config(
+    db: Session,
+    payload: UpdateActiveBattleConfigRequest,
+) -> Battle:
+    battle = db.scalar(
+        select(Battle)
+        .where(Battle.status == BattleStatus.ACTIVE)
+        .order_by(Battle.updated_at.desc(), Battle.id.desc())
+        .limit(1)
+    )
+
+    if battle is None:
+        raise ValueError("Active battle not found")
+
+    battle.map_config = payload.map_config
+
+    db.add(
+        AuditLog(
+            action="active_battle_config_updated",
+            entity_type="battle",
+            entity_id=str(battle.id),
+            payload=payload.map_config,
             actor_user_id=payload.moderator_user_id,
         )
     )

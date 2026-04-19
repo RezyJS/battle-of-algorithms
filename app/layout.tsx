@@ -17,7 +17,7 @@ export default async function RootLayout({
 
   return (
     <html lang="ru">
-      <body className="bg-gray-950 text-white min-h-screen flex flex-col">
+      <body className="min-h-screen flex flex-col text-slate-950 antialiased">
         <Navbar currentUser={currentUser} />
         <main className="flex-1">{children}</main>
       </body>

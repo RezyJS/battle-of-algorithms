@@ -108,7 +108,7 @@ export function MapEditorGrid({
   };
 
   return (
-    <div className="bg-gray-900/50 p-3 rounded-xl border border-white/5 shadow-2xl overflow-auto">
+    <div className="bg-white/80 p-3 rounded-xl border border-slate-200 shadow-[0_24px_60px_-36px_rgba(15,23,42,0.35)] overflow-auto">
       {grid.map((row, y) => (
         <div key={y} className="flex">
           {row.map((cell, x) => {

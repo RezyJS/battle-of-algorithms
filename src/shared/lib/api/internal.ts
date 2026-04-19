@@ -1,5 +1,6 @@
 import { getApiUrl, getInternalApiSecret } from '@/src/shared/lib/auth/config';
 import { getCurrentUser } from '@/src/shared/lib/auth/session';
+import type { ArenaMapConfig } from '@/src/shared/lib/arena-config';
 
 export type ModerationSubmission = {
   id: number;
@@ -58,6 +59,7 @@ export type ActiveBattle = {
   right_submission_version: number | null;
   left_code: string | null;
   right_code: string | null;
+  map_config: ArenaMapConfig | null;
   started_at: string | null;
   updated_at: string;
 };
@@ -194,6 +196,7 @@ export async function getArenaUsers(): Promise<ArenaUserOption[]> {
 export async function setActiveBattle(
   leftPlayerId: number,
   rightPlayerId: number,
+  mapConfig?: ArenaMapConfig,
 ) {
   const currentUser = await getCurrentUser();
 
@@ -207,6 +210,23 @@ export async function setActiveBattle(
       left_player_id: leftPlayerId,
       right_player_id: rightPlayerId,
       moderator_user_id: currentUser.appUserId,
+      map_config: mapConfig ?? null,
+    }),
+  });
+}
+
+export async function updateActiveBattleConfig(mapConfig: ArenaMapConfig) {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.appUserId) {
+    throw new Error('Current user does not have appUserId in session');
+  }
+
+  await internalFetch('/api/internal/arena/active-battle/config', {
+    method: 'POST',
+    body: JSON.stringify({
+      moderator_user_id: currentUser.appUserId,
+      map_config: mapConfig,
     }),
   });
 }

@@ -2,12 +2,16 @@ import { create } from 'zustand';
 import type {
   StateSnapshot,
   FieldGrid,
-  GridPoint,
 } from '@/src/shared/model';
 import { Operator } from '@/src/entities/operator';
-import { STATIC_FIELD, mergeFields, generateMap } from '@/src/entities/field';
+import { mergeFields } from '@/src/entities/field';
 import { executeScript } from '@/src/features/battle-runner';
 import { algorithmTemplates } from '@/src/features/script-editor';
+import {
+  buildStaticArenaMapConfig,
+  type ArenaMapConfig,
+  type ArenaMapType,
+} from '@/src/shared/lib/arena-config';
 
 interface PlayerConfig {
   uid: string;
@@ -21,6 +25,8 @@ const PLAYERS: PlayerConfig[] = [
 ];
 
 export type GameMode = 'race' | 'duel';
+
+const DEFAULT_ARENA_CONFIG = buildStaticArenaMapConfig();
 
 export type GameResult = {
   winner: number | null; // 0, 1, or null for draw
@@ -53,19 +59,16 @@ interface GameState {
   scripts: string[];
   field: FieldGrid;
   currentMap: FieldGrid;
-  useRandomMap: boolean;
+  mapType: ArenaMapType;
   speedIndex: number;
   result: GameResult;
   effectiveMaxStep: number;
   mapWidth: number;
   mapHeight: number;
   gameMode: GameMode;
-  isGenerating: boolean;
 
   initialize: () => void;
-  generateNewMap: () => void;
-  generateNewMapAnimated: () => void;
-  setCustomMap: (grid: FieldGrid, spawn1: GridPoint, spawn2: GridPoint) => void;
+  applyArenaConfig: (config: ArenaMapConfig) => void;
   runAlgorithms: () => void;
   togglePlayback: () => void;
   reset: () => void;
@@ -73,10 +76,7 @@ interface GameState {
   setScript: (index: number, script: string) => void;
   setScriptsPair: (leftScript: string, rightScript: string) => void;
   setIsRunning: (running: boolean) => void;
-  setUseRandomMap: (value: boolean) => void;
   setSpeedIndex: (index: number) => void;
-  setMapSize: (width: number, height: number) => void;
-  setGameMode: (mode: GameMode) => void;
 }
 
 /**
@@ -186,8 +186,8 @@ function determineResult(
 
 export const useGameStore = create<GameState>((set, get) => {
   let spawnPositions = [
-    { x: 2, y: 1 },
-    { x: 3, y: 4 },
+    DEFAULT_ARENA_CONFIG.spawn1,
+    DEFAULT_ARENA_CONFIG.spawn2,
   ];
 
   return {
@@ -198,51 +198,28 @@ export const useGameStore = create<GameState>((set, get) => {
     operators: [],
     scriptError: '',
     scripts: [algorithmTemplates.simple.code, algorithmTemplates.wallFollower.code],
-    field: STATIC_FIELD,
-    currentMap: STATIC_FIELD,
-    useRandomMap: false,
+    field: DEFAULT_ARENA_CONFIG.grid,
+    currentMap: DEFAULT_ARENA_CONFIG.grid,
+    mapType: DEFAULT_ARENA_CONFIG.mapType,
     speedIndex: 1, // 1x
     result: null,
     effectiveMaxStep: 0,
-    mapWidth: 10,
-    mapHeight: 8,
-    gameMode: 'race' as GameMode,
-    isGenerating: false,
+    mapWidth: DEFAULT_ARENA_CONFIG.width,
+    mapHeight: DEFAULT_ARENA_CONFIG.height,
+    gameMode: DEFAULT_ARENA_CONFIG.gameMode,
 
-    generateNewMap: () => {
-      const { mapWidth, mapHeight } = get();
-      const { grid, spawn1, spawn2 } = generateMap(mapWidth, mapHeight);
-      spawnPositions = [spawn1, spawn2];
-      set({ currentMap: grid });
-      get().initialize();
-    },
-
-    generateNewMapAnimated: () => {
-      if (get().isGenerating) return;
-      set({ isGenerating: true });
-
-      const totalFrames = 12;
-      const intervalMs = 60;
-      let frame = 0;
-
-      const timer = setInterval(() => {
-        get().generateNewMap();
-        frame++;
-        if (frame >= totalFrames) {
-          clearInterval(timer);
-          set({ isGenerating: false });
-        }
-      }, intervalMs);
-    },
-
-    setCustomMap: (grid, spawn1, spawn2) => {
-      const nextMap = grid.map((row) => [...row]);
-      spawnPositions = [spawn1, spawn2];
+    applyArenaConfig: (config) => {
+      const nextMap = config.grid.map((row) => [...row]);
+      spawnPositions = [config.spawn1, config.spawn2];
       set({
         currentMap: nextMap,
-        useRandomMap: false,
-        mapWidth: nextMap[0]?.length ?? 0,
-        mapHeight: nextMap.length,
+        field: nextMap,
+        mapType: config.mapType,
+        mapWidth: config.width,
+        mapHeight: config.height,
+        gameMode: config.gameMode,
+        isRunning: false,
+        result: null,
       });
       get().initialize();
     },
@@ -363,48 +340,48 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     setScript: (index, script) => {
+      const { currentMap } = get();
+
       set((state) => {
         const scripts = [...state.scripts];
         scripts[index] = script;
-        return { scripts };
+        return {
+          scripts,
+          currentStep: 0,
+          isRunning: false,
+          histories: [],
+          messages: [],
+          scriptError: '',
+          result: null,
+          field: currentMap,
+          effectiveMaxStep: 0,
+        };
       });
+
+      get().initialize();
     },
 
     setScriptsPair: (leftScript, rightScript) => {
+      const { currentMap } = get();
+
       set({
         scripts: [leftScript, rightScript],
+        currentStep: 0,
+        isRunning: false,
+        histories: [],
+        messages: [],
+        scriptError: '',
+        result: null,
+        field: currentMap,
+        effectiveMaxStep: 0,
       });
+
+      get().initialize();
     },
 
     setIsRunning: (running) => set({ isRunning: running }),
 
-    setUseRandomMap: (value) => {
-      if (value) {
-        get().generateNewMap();
-      } else {
-        spawnPositions = [{ x: 2, y: 1 }, { x: 3, y: 4 }];
-        set({ currentMap: STATIC_FIELD });
-        get().initialize();
-      }
-      set({ useRandomMap: value });
-    },
-
     setSpeedIndex: (index) => set({ speedIndex: index }),
-
-    setMapSize: (width, height) => {
-      const w = Math.max(MAP_SIZE_LIMITS.minWidth, Math.min(MAP_SIZE_LIMITS.maxWidth, width));
-      const h = Math.max(MAP_SIZE_LIMITS.minHeight, Math.min(MAP_SIZE_LIMITS.maxHeight, height));
-      set({ mapWidth: w, mapHeight: h });
-      const { useRandomMap } = get();
-      if (useRandomMap) {
-        get().generateNewMap();
-      }
-    },
-
-    setGameMode: (mode) => {
-      set({ gameMode: mode });
-      get().initialize();
-    },
   };
 });
 

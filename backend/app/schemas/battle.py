@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -30,6 +30,7 @@ class ActiveBattleResponse(BaseModel):
     right_submission_version: Optional[int] = None
     left_code: Optional[str] = None
     right_code: Optional[str] = None
+    map_config: Optional[dict[str, Any]] = None
     started_at: Optional[datetime] = None
     updated_at: datetime
 
@@ -38,6 +39,12 @@ class SetActiveBattleRequest(BaseModel):
     left_player_id: int
     right_player_id: int
     moderator_user_id: int
+    map_config: Optional[dict[str, Any]] = None
+
+
+class UpdateActiveBattleConfigRequest(BaseModel):
+    moderator_user_id: int
+    map_config: dict[str, Any]
 
 
 class BattleResponse(BaseModel):
@@ -50,6 +57,7 @@ class BattleResponse(BaseModel):
     right_player_id: Optional[int] = None
     left_submission_id: Optional[int] = None
     right_submission_id: Optional[int] = None
+    map_config: Optional[dict[str, Any]] = None
     started_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
     created_by: Optional[int] = None

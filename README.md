@@ -42,6 +42,22 @@ cp backend/.env.example backend/.env
 
 Перед запуском убедись, что `Docker Desktop` открыт и docker daemon запущен.
 
+Если нужно поднять всё dev-окружение одной командой:
+
+```bash
+make dev
+```
+
+Эта команда:
+
+- поднимет `postgres` и `keycloak` через `docker-compose`;
+- запустит backend на `:8000`;
+- запустит frontend на `:3000`.
+
+Остановить frontend/backend можно `Ctrl+C`, а инфраструктуру потом выключить `make infra-down`.
+
+Если хочешь запускать по частям:
+
 ```bash
 make infra-up
 ```

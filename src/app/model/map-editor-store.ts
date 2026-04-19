@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { validateReachability } from '@/src/entities/field';
-import { MAP_SIZE_LIMITS, useGameStore } from './game-store';
+import { MAP_SIZE_LIMITS } from './game-store';
 import { FieldContent } from '@/src/shared/model';
 import type { FieldGrid, GridPoint } from '@/src/shared/model';
 
@@ -139,12 +139,12 @@ interface MapEditorState {
   validationError: string | null;
 
   initGrid: (width: number, height: number) => void;
+  loadGrid: (grid: FieldGrid) => void;
   paintCell: (x: number, y: number) => void;
   setTool: (tool: BrushType) => void;
   resize: (width: number, height: number) => void;
   clear: () => void;
   validate: () => boolean;
-  applyToGame: () => void;
 }
 
 const initialWidth = MAP_SIZE_LIMITS.minWidth;
@@ -163,6 +163,26 @@ export const useMapEditorStore = create<MapEditorState>((set, get) => ({
 
     set({
       grid: createGrid(nextWidth, nextHeight),
+      width: nextWidth,
+      height: nextHeight,
+      validationError: null,
+    });
+  },
+
+  loadGrid: (grid) => {
+    const nextHeight = clampHeight(grid.length || initialHeight);
+    const nextWidth = clampWidth(grid[0]?.length || initialWidth);
+    const nextGrid = createGrid(nextWidth, nextHeight);
+
+    for (let y = 0; y < nextHeight; y++) {
+      for (let x = 0; x < nextWidth; x++) {
+        const cell = grid[y]?.[x];
+        nextGrid[y][x] = cell ?? nextGrid[y][x];
+      }
+    }
+
+    set({
+      grid: nextGrid,
       width: nextWidth,
       height: nextHeight,
       validationError: null,
@@ -274,25 +294,6 @@ export const useMapEditorStore = create<MapEditorState>((set, get) => ({
     set({ validationError: null });
     return true;
   },
-
-  applyToGame: () => {
-    if (!get().validate()) {
-      return;
-    }
-
-    const { grid } = get();
-    const spawn1 = findPoint(grid, 'spawn1');
-    const spawn2 = findPoint(grid, 'spawn2');
-
-    if (!spawn1 || !spawn2) {
-      set({ validationError: 'Не удалось определить точки спавна.' });
-      return;
-    }
-
-    useGameStore
-      .getState()
-      .setCustomMap(sanitizeGrid(grid), spawn1, spawn2);
-
-    set({ validationError: null });
-  },
 }));
+
+export { findPoint, sanitizeGrid };

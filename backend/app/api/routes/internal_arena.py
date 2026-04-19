@@ -13,12 +13,14 @@ from app.schemas.battle import (
     ArenaUserOption,
     BattleResponse,
     SetActiveBattleRequest,
+    UpdateActiveBattleConfigRequest,
 )
 from app.services.battle_service import (
     clear_active_battle,
     get_active_battle,
     list_arena_users,
     set_active_battle,
+    update_active_battle_config,
 )
 
 router = APIRouter()
@@ -65,6 +67,25 @@ def write_active_battle(
 
     try:
         battle = set_active_battle(db, payload)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+    return BattleResponse.model_validate(battle)
+
+
+@router.post("/active-battle/config", response_model=BattleResponse)
+def write_active_battle_config(
+    payload: UpdateActiveBattleConfigRequest,
+    db: Session = Depends(get_db),
+    x_internal_api_secret: str = Header(default=""),
+) -> BattleResponse:
+    validate_internal_secret(x_internal_api_secret)
+
+    try:
+        battle = update_active_battle_config(db, payload)
     except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
