@@ -2,7 +2,7 @@
 name = "battle-of-algorithms-backend"
 version = "0.1.0"
 description = "Backend API for Battle of Algorithms"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
   "alembic>=1.16.0,<2.0.0",
   "fastapi>=0.116.0,<1.0.0",
