@@ -5,8 +5,13 @@ import {
   exchangeCodeForUser,
   readAuthorizationCookies,
 } from '@/src/shared/lib/auth/keycloak';
+import { getAppUrl } from '@/src/shared/lib/auth/config';
 import { attachSessionCookie } from '@/src/shared/lib/auth/session';
 import { syncUserProfile } from '@/src/shared/lib/auth/sync-user';
+
+function getAppRedirectUrl(path: string): URL {
+  return new URL(path, getAppUrl());
+}
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code');
@@ -14,30 +19,28 @@ export async function GET(request: NextRequest) {
   const authError = request.nextUrl.searchParams.get('error');
 
   if (authError) {
-    return NextResponse.redirect(new URL('/auth-error?code=oauth', request.url));
+    return NextResponse.redirect(getAppRedirectUrl('/auth-error?code=oauth'));
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(
-      new URL('/auth-error?code=callback', request.url),
-    );
+    return NextResponse.redirect(getAppRedirectUrl('/auth-error?code=callback'));
   }
 
   const storedValues = readAuthorizationCookies(request);
 
   if (!storedValues.state || !storedValues.codeVerifier) {
-    return NextResponse.redirect(new URL('/auth-error?code=state', request.url));
+    return NextResponse.redirect(getAppRedirectUrl('/auth-error?code=state'));
   }
 
   if (storedValues.state !== state) {
-    return NextResponse.redirect(new URL('/auth-error?code=state', request.url));
+    return NextResponse.redirect(getAppRedirectUrl('/auth-error?code=state'));
   }
 
   try {
     const authResult = await exchangeCodeForUser(code, storedValues.codeVerifier);
     const syncedUser = await syncUserProfile(authResult.user);
     const response = NextResponse.redirect(
-      new URL(storedValues.returnTo || '/', request.url),
+      getAppRedirectUrl(storedValues.returnTo || '/'),
     );
 
     clearAuthorizationCookies(response);
@@ -46,7 +49,7 @@ export async function GET(request: NextRequest) {
     return response;
   } catch {
     const response = NextResponse.redirect(
-      new URL('/auth-error?code=exchange', request.url),
+      getAppRedirectUrl('/auth-error?code=exchange'),
     );
 
     clearAuthorizationCookies(response);
