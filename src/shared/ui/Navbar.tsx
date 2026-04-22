@@ -101,18 +101,18 @@ export function Navbar({
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-            <Link
+            <a
               href="/api/auth/login"
               className="h-9 inline-flex items-center rounded-md border border-slate-200 bg-white/70 px-3 text-sm text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950"
             >
               Войти
-            </Link>
-            <Link
+            </a>
+            <a
               href="/api/auth/register"
               className="h-9 inline-flex items-center rounded-md bg-indigo-600 px-3 text-sm text-white transition-colors hover:bg-indigo-500 shadow-sm"
             >
               Регистрация
-            </Link>
+            </a>
           </div>
         )}
       </div>

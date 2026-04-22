@@ -9,5 +9,5 @@ export default async function RegisterPage() {
     redirect('/');
   }
 
-  redirect('/api/auth/login');
+  redirect('/api/auth/register');
 }

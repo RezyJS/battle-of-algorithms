@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 const ERROR_MESSAGES: Record<string, string> = {
   oauth: 'Не удалось выполнить вход.',
   callback: 'Ответ от сервиса авторизации некорректен.',
@@ -22,12 +20,12 @@ export default async function AuthErrorPage({
     <div className="min-h-[calc(100vh-56px)] flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white/85 p-8 text-center shadow-sm">
         <h1 className="text-2xl font-semibold text-slate-950">{message}</h1>
-        <Link
+        <a
           href="/api/auth/login"
           className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white transition-colors hover:bg-indigo-500 shadow-sm"
         >
           Попробовать снова
-        </Link>
+        </a>
       </div>
     </div>
   );
