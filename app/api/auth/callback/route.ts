@@ -47,7 +47,15 @@ export async function GET(request: NextRequest) {
     attachSessionCookie(response, syncedUser, authResult.idToken);
 
     return response;
-  } catch {
+  } catch (error) {
+    console.error('Auth callback exchange failed', {
+      error,
+      requestUrl: request.url,
+      returnTo: storedValues.returnTo,
+      hasState: Boolean(storedValues.state),
+      hasCodeVerifier: Boolean(storedValues.codeVerifier),
+    });
+
     const response = NextResponse.redirect(
       getAppRedirectUrl('/auth-error?code=exchange'),
     );
