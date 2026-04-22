@@ -1,6 +1,7 @@
 import { getApiUrl, getInternalApiSecret } from '@/src/shared/lib/auth/config';
 import { getCurrentUser } from '@/src/shared/lib/auth/session';
 import type { ArenaMapConfig } from '@/src/shared/lib/arena-config';
+import type { GameResult } from '@/src/app/model/game-store';
 
 export type ModerationSubmission = {
   id: number;
@@ -62,6 +63,72 @@ export type ActiveBattle = {
   map_config: ArenaMapConfig | null;
   started_at: string | null;
   updated_at: string;
+};
+
+export type PrivateBattleListItem = {
+  id: number;
+  title: string;
+  status: string;
+  left_player_id: number | null;
+  right_player_id: number | null;
+  left_player_name: string | null;
+  left_player_username: string | null;
+  right_player_name: string | null;
+  right_player_username: string | null;
+  left_ready: boolean;
+  right_ready: boolean;
+  left_code_confirmed: boolean;
+  right_code_confirmed: boolean;
+  left_map_change_requested: boolean;
+  right_map_change_requested: boolean;
+  map_revision: number;
+  has_result: boolean;
+  winner_player_id: number | null;
+  winner_slot: 'left' | 'right' | null;
+  result_reason: string | null;
+  result_scores: number[] | null;
+  finished_at: string | null;
+  current_user_slot: 'left' | 'right';
+  updated_at: string;
+};
+
+export type PrivateBattle = {
+  id: number;
+  title: string;
+  status: string;
+  left_player_id: number | null;
+  right_player_id: number | null;
+  left_player_name: string | null;
+  left_player_username: string | null;
+  right_player_name: string | null;
+  right_player_username: string | null;
+  left_ready: boolean;
+  right_ready: boolean;
+  left_code_confirmed: boolean;
+  right_code_confirmed: boolean;
+  left_map_change_requested: boolean;
+  right_map_change_requested: boolean;
+  map_revision: number;
+  current_user_slot: 'left' | 'right';
+  current_user_code: string;
+  can_view_battle: boolean;
+  has_result: boolean;
+  winner_player_id: number | null;
+  winner_slot: 'left' | 'right' | null;
+  result_reason: string | null;
+  result_scores: number[] | null;
+  left_code: string | null;
+  right_code: string | null;
+  map_config: ArenaMapConfig | null;
+  created_at: string;
+  finished_at: string | null;
+  updated_at: string;
+};
+
+export type PrivateBattleUserOption = {
+  id: number;
+  username: string;
+  display_name: string | null;
 };
 
 async function internalFetch(path: string, init?: RequestInit) {
@@ -244,4 +311,188 @@ export async function clearActiveBattle() {
       moderator_user_id: currentUser.appUserId,
     }),
   });
+}
+
+export async function getPrivateBattles(): Promise<PrivateBattleListItem[]> {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.appUserId) {
+    throw new Error('Current user does not have appUserId in session');
+  }
+
+  return safeInternalJson<PrivateBattleListItem[]>(
+    `/api/internal/arena/private-battles?user_id=${currentUser.appUserId}`,
+    [],
+  );
+}
+
+export async function getPrivateBattle(
+  battleId: number,
+): Promise<PrivateBattle | null> {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.appUserId) {
+    throw new Error('Current user does not have appUserId in session');
+  }
+
+  return safeInternalJson<PrivateBattle | null>(
+    `/api/internal/arena/private-battles/${battleId}?user_id=${currentUser.appUserId}`,
+    null,
+  );
+}
+
+export async function getPrivateBattleUsers(
+  query = '',
+): Promise<PrivateBattleUserOption[]> {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.appUserId) {
+    throw new Error('Current user does not have appUserId in session');
+  }
+
+  const searchParams = new URLSearchParams({
+    user_id: String(currentUser.appUserId),
+    query,
+  });
+
+  return safeInternalJson<PrivateBattleUserOption[]>(
+    `/api/internal/arena/private-battle-users?${searchParams.toString()}`,
+    [],
+  );
+}
+
+export async function createPrivateBattle(
+  opponentUsername: string,
+): Promise<PrivateBattle> {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.appUserId) {
+    throw new Error('Current user does not have appUserId in session');
+  }
+
+  const response = await internalFetch('/api/internal/arena/private-battles', {
+    method: 'POST',
+    body: JSON.stringify({
+      inviter_user_id: currentUser.appUserId,
+      opponent_username: opponentUsername,
+    }),
+  });
+
+  return (await response.json()) as PrivateBattle;
+}
+
+export async function savePrivateBattleCode(
+  battleId: number,
+  code: string,
+): Promise<PrivateBattle> {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.appUserId) {
+    throw new Error('Current user does not have appUserId in session');
+  }
+
+  const response = await internalFetch(
+    `/api/internal/arena/private-battles/${battleId}/code`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: currentUser.appUserId,
+        code,
+      }),
+    },
+  );
+
+  return (await response.json()) as PrivateBattle;
+}
+
+export async function confirmPrivateBattleCode(
+  battleId: number,
+): Promise<PrivateBattle> {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.appUserId) {
+    throw new Error('Current user does not have appUserId in session');
+  }
+
+  const response = await internalFetch(
+    `/api/internal/arena/private-battles/${battleId}/confirm-code`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: currentUser.appUserId,
+      }),
+    },
+  );
+
+  return (await response.json()) as PrivateBattle;
+}
+
+export async function rerollPrivateBattleMap(
+  battleId: number,
+): Promise<PrivateBattle> {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.appUserId) {
+    throw new Error('Current user does not have appUserId in session');
+  }
+
+  const response = await internalFetch(
+    `/api/internal/arena/private-battles/${battleId}/reroll-map`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: currentUser.appUserId,
+      }),
+    },
+  );
+
+  return (await response.json()) as PrivateBattle;
+}
+
+export async function markPrivateBattleReady(
+  battleId: number,
+): Promise<PrivateBattle> {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.appUserId) {
+    throw new Error('Current user does not have appUserId in session');
+  }
+
+  const response = await internalFetch(
+    `/api/internal/arena/private-battles/${battleId}/ready`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: currentUser.appUserId,
+      }),
+    },
+  );
+
+  return (await response.json()) as PrivateBattle;
+}
+
+export async function savePrivateBattleResult(
+  battleId: number,
+  result: NonNullable<GameResult>,
+): Promise<PrivateBattle> {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.appUserId) {
+    throw new Error('Current user does not have appUserId in session');
+  }
+
+  const response = await internalFetch(
+    `/api/internal/arena/private-battles/${battleId}/result`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: currentUser.appUserId,
+        winner: result.winner,
+        reason: result.reason,
+        scores: result.scores,
+      }),
+    },
+  );
+
+  return (await response.json()) as PrivateBattle;
 }

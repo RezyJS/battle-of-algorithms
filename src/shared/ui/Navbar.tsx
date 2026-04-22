@@ -21,6 +21,14 @@ export function Navbar({
   const pathname = usePathname();
   const navItems = [...baseNavItems];
 
+  if (currentUser) {
+    navItems.splice(2, 0, {
+      href: '/private-battles',
+      label: 'Приватные бои',
+      icon: Swords,
+    });
+  }
+
   if (
     currentUser &&
     currentUser.roles.some((role) => role === 'moderator' || role === 'admin')
