@@ -45,3 +45,5 @@ backend/.venv/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+infra/docker-compose.yml
