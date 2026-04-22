@@ -1,17 +1,19 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { useGameStore, SPEED_OPTIONS } from '@/src/app/model/game-store';
-import { ArenaLegend } from '@/src/widgets/arena-legend';
-import { ControlPanel } from '@/src/widgets/control-panel';
-import { EventLog } from '@/src/widgets/event-log';
-import { GameBoard } from '@/src/widgets/game-board';
+import {
+  loadPersistedPlaybackState,
+  savePersistedPlaybackState,
+} from '@/src/shared/lib/battle-playback-persist';
+import { usePollingRefresh } from '@/src/shared/lib/usePollingRefresh';
 import type { ActiveBattle } from '@/src/shared/lib/api/internal';
 import {
   buildStaticArenaMapConfig,
   normalizeArenaMapConfig,
 } from '@/src/shared/lib/arena-config';
+import { ActiveBattlePage, NoBattlePage } from '@/src/widgets/arena-page';
 
 export function ArenaPageClient({
   canManageArena,
@@ -20,6 +22,11 @@ export function ArenaPageClient({
   canManageArena: boolean;
   activeBattle: ActiveBattle | null;
 }) {
+  usePollingRefresh(5000);
+  const appliedScriptsKeyRef = useRef<string | null>(null);
+  const appliedConfigKeyRef = useRef<string | null>(null);
+  const restoredPlaybackKeyRef = useRef<string | null>(null);
+
   const {
     currentStep,
     isRunning,
@@ -34,32 +41,60 @@ export function ArenaPageClient({
     mapHeight,
     gameMode,
     applyArenaConfig,
+    restorePlaybackState,
     setScriptsPair,
-    initialize,
     togglePlayback,
     reset,
+    stepBackward,
     stepForward,
+    setStep,
     setSpeedIndex,
   } = useGameStore();
+  const scriptsKey = useMemo(
+    () =>
+      activeBattle?.left_code && activeBattle?.right_code ?
+        `${activeBattle.id}:${activeBattle.left_code}:${activeBattle.right_code}`
+      : null,
+    [activeBattle?.id, activeBattle?.left_code, activeBattle?.right_code],
+  );
+  const configKey = useMemo(
+    () =>
+      JSON.stringify(
+        normalizeArenaMapConfig(
+          activeBattle?.map_config,
+          buildStaticArenaMapConfig(),
+        ),
+      ),
+    [activeBattle?.map_config],
+  );
+  const playbackKey = useMemo(
+    () =>
+      activeBattle ?
+        `arena:${activeBattle.id}:${activeBattle.updated_at}`
+      : null,
+    [activeBattle],
+  );
 
   useEffect(() => {
-    if (activeBattle?.left_code && activeBattle?.right_code) {
+    if (
+      activeBattle?.left_code &&
+      activeBattle?.right_code &&
+      appliedScriptsKeyRef.current !== scriptsKey
+    ) {
+      appliedScriptsKeyRef.current = scriptsKey;
       setScriptsPair(activeBattle.left_code, activeBattle.right_code);
     }
-  }, [activeBattle?.left_code, activeBattle?.right_code, setScriptsPair]);
+  }, [activeBattle?.left_code, activeBattle?.right_code, scriptsKey, setScriptsPair]);
 
   useEffect(() => {
-    const nextConfig = normalizeArenaMapConfig(
-      activeBattle?.map_config,
-      buildStaticArenaMapConfig(),
-    );
+    if (appliedConfigKeyRef.current === configKey) {
+      return;
+    }
 
+    appliedConfigKeyRef.current = configKey;
+    const nextConfig = JSON.parse(configKey);
     applyArenaConfig(nextConfig);
-  }, [activeBattle?.map_config, applyArenaConfig]);
-
-  useEffect(() => {
-    initialize();
-  }, [initialize, activeBattle?.left_code, activeBattle?.right_code]);
+  }, [applyArenaConfig, configKey]);
 
   useEffect(() => {
     if (!isRunning || histories.length === 0 || histories[0]?.length <= 1) {
@@ -73,70 +108,64 @@ export function ArenaPageClient({
     return () => clearInterval(timer);
   }, [isRunning, histories, stepForward, speedIndex]);
 
+  useEffect(() => {
+    if (
+      !playbackKey ||
+      histories.length === 0 ||
+      restoredPlaybackKeyRef.current === playbackKey
+    ) {
+      return;
+    }
+
+    restoredPlaybackKeyRef.current = playbackKey;
+    restorePlaybackState(loadPersistedPlaybackState(playbackKey));
+  }, [histories.length, playbackKey, restorePlaybackState]);
+
+  useEffect(() => {
+    if (!playbackKey || histories.length === 0) {
+      return;
+    }
+
+    savePersistedPlaybackState(playbackKey, {
+      currentStep,
+      messages,
+      result,
+    });
+  }, [currentStep, histories.length, messages, playbackKey, result]);
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Арена</h1>
-        <p className="text-slate-600 text-sm mt-1">
-          Наблюдайте за соревнованием алгоритмов. Скрипты редактируются в{' '}
-          <a href="/editor" className="text-indigo-600 hover:underline">
-            Редакторе
-          </a>
-          .
+    <div className='mx-auto h-full max-w-7xl px-4 py-4'>
+      <div className='mb-4'>
+        <h1 className='text-2xl font-bold'>Арена</h1>
+        <p className='mt-1 text-sm text-slate-600'>
+          Здесь вы можете следить за ходом публичных соревнований.
         </p>
       </div>
 
-      {activeBattle ? (
-        <div className="mb-6 rounded-2xl border border-slate-200 bg-white/80 px-5 py-4 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.25em] text-indigo-600">
-            Сейчас бой
-          </p>
-          <p className="mt-2 text-xl font-semibold text-slate-950">
-            {activeBattle.left_player_name} vs {activeBattle.right_player_name}
-          </p>
-          <p className="mt-2 text-sm text-slate-600">
-            Версии: v{activeBattle.left_submission_version} vs v{activeBattle.right_submission_version}
-          </p>
-        </div>
-      ) : (
-        <div className="mb-6 rounded-2xl border border-dashed border-slate-300 bg-white/60 px-5 py-4 shadow-sm">
-          <p className="text-sm text-slate-600">Сейчас бой не выбран.</p>
-        </div>
-      )}
-
-      <div className="flex flex-col gap-6 xl:flex-row">
-        <div className="flex-1 flex items-start justify-center">
-          <GameBoard field={field} />
-        </div>
-
-        <div className="xl:w-72 flex flex-col gap-4">
-          <ControlPanel
-            canManageArena={canManageArena}
-            isRunning={isRunning}
-            currentStep={currentStep}
-            histories={histories}
-            mapType={mapType}
-            speedIndex={speedIndex}
-            result={result}
-            mapWidth={mapWidth}
-            mapHeight={mapHeight}
-            gameMode={gameMode}
-            activeBattle={activeBattle}
-            onToggle={togglePlayback}
-            onReset={reset}
-            onSpeedChange={setSpeedIndex}
-          />
-
-          {scriptError && (
-            <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-xl text-sm shadow-sm">
-              {scriptError}
-            </div>
-          )}
-
-          <EventLog messages={messages} />
-          <ArenaLegend />
-        </div>
-      </div>
+      {activeBattle ?
+        <ActiveBattlePage
+          activeBattle={activeBattle}
+          field={field}
+          canManageArena={canManageArena}
+          isRunning={isRunning}
+          currentStep={currentStep}
+          histories={histories}
+          mapType={mapType}
+          speedIndex={speedIndex}
+          result={result}
+          mapWidth={mapWidth}
+          mapHeight={mapHeight}
+          gameMode={gameMode}
+          onToggle={togglePlayback}
+          onReset={reset}
+          onStepBackward={stepBackward}
+          onStepForward={stepForward}
+          onSetStep={setStep}
+          onSpeedChange={setSpeedIndex}
+          scriptError={scriptError}
+          messages={messages}
+        />
+      : <NoBattlePage />}
     </div>
   );
 }

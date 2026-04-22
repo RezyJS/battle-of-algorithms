@@ -70,14 +70,23 @@ interface GameState {
   initialize: () => void;
   applyArenaConfig: (config: ArenaMapConfig) => void;
   runAlgorithms: () => void;
+  restorePlaybackState: (state: PersistedPlaybackState | null) => void;
   togglePlayback: () => void;
   reset: () => void;
+  stepBackward: () => void;
   stepForward: () => void;
+  setStep: (step: number) => void;
   setScript: (index: number, script: string) => void;
   setScriptsPair: (leftScript: string, rightScript: string) => void;
   setIsRunning: (running: boolean) => void;
   setSpeedIndex: (index: number) => void;
 }
+
+export type PersistedPlaybackState = {
+  currentStep: number;
+  messages: string[];
+  result: GameResult;
+};
 
 /**
  * Determine the effective last step: once both have exited or it's clear
@@ -184,6 +193,31 @@ function determineResult(
   return { winner: null, reason: 'Таймаут — никто не выбрался', scores };
 }
 
+function buildMessagesUntilStep(
+  operators: Operator[],
+  histories: StateSnapshot[][],
+  step: number,
+): string[] {
+  const nextMessages: string[] = [];
+
+  for (let current = 1; current <= step; current++) {
+    operators.forEach((op, idx) => {
+      const history = histories[idx];
+      if (current >= history.length) return;
+      const prev = history[current - 1];
+      const snap = history[current];
+      if (snap.hasKey && !prev.hasKey) {
+        nextMessages.push(`${op.getUID()} 🔑 Ключ подобран!`);
+      }
+      if (snap.hasExited && !prev.hasExited) {
+        nextMessages.push(`${op.getUID()} 🚪 Выбрался!`);
+      }
+    });
+  }
+
+  return nextMessages;
+}
+
 export const useGameStore = create<GameState>((set, get) => {
   let spawnPositions = [
     DEFAULT_ARENA_CONFIG.spawn1,
@@ -273,8 +307,41 @@ export const useGameStore = create<GameState>((set, get) => {
       set({ histories, currentStep: 0, messages: [], result: null, effectiveMaxStep });
     },
 
+    restorePlaybackState: (persistedState) => {
+      if (!persistedState) {
+        return;
+      }
+
+      let { histories, effectiveMaxStep, currentMap, operators } = get();
+
+      if (histories.length === 0 || histories[0]?.length <= 1) {
+        get().runAlgorithms();
+        ({ histories, effectiveMaxStep, currentMap, operators } = get());
+      }
+
+      if (histories.length === 0) {
+        return;
+      }
+
+      const nextStep = Math.max(
+        0,
+        Math.min(persistedState.currentStep, effectiveMaxStep),
+      );
+
+      set({
+        currentStep: nextStep,
+        isRunning: false,
+        messages: persistedState.messages,
+        result:
+          nextStep >= effectiveMaxStep ?
+            persistedState.result ?? determineResult(histories, nextStep)
+          : persistedState.result,
+        field: mergeFields(currentMap, operators, histories, nextStep),
+      });
+    },
+
     togglePlayback: () => {
-      const { isRunning, histories, currentStep, effectiveMaxStep } = get();
+      const { isRunning, histories, currentStep, effectiveMaxStep, currentMap, operators } = get();
       if (isRunning) {
         set({ isRunning: false });
         return;
@@ -282,19 +349,43 @@ export const useGameStore = create<GameState>((set, get) => {
 
       const needsRun =
         histories.length === 0 ||
-        histories[0]?.length <= 1 ||
-        currentStep >= effectiveMaxStep;
+        histories[0]?.length <= 1;
 
       if (needsRun) {
         get().initialize();
         get().runAlgorithms();
+      } else if (currentStep >= effectiveMaxStep) {
+        set({
+          currentStep: 0,
+          messages: [],
+          field: mergeFields(currentMap, operators, histories, 0),
+        });
       }
+
       set({ isRunning: true });
     },
 
     reset: () => {
+      const { histories, currentMap, operators } = get();
+
+      if (histories.length > 0 && histories[0]?.length > 0) {
+        set({
+          currentStep: 0,
+          isRunning: false,
+          messages: [],
+          scriptError: '',
+          field: mergeFields(currentMap, operators, histories, 0),
+        });
+        return;
+      }
+
       get().initialize();
       set({ isRunning: false });
+    },
+
+    stepBackward: () => {
+      const { currentStep } = get();
+      get().setStep(currentStep - 1);
     },
 
     stepForward: () => {
@@ -337,6 +428,27 @@ export const useGameStore = create<GameState>((set, get) => {
         field,
         ...(result ? { result, isRunning: false } : {}),
       }));
+    },
+
+    setStep: (step) => {
+      const { histories, operators, currentMap, effectiveMaxStep } = get();
+
+      if (histories.length === 0) {
+        return;
+      }
+
+      const nextStep = Math.max(0, Math.min(step, effectiveMaxStep));
+
+      set({
+        currentStep: nextStep,
+        isRunning: false,
+        messages: buildMessagesUntilStep(operators, histories, nextStep),
+        field: mergeFields(currentMap, operators, histories, nextStep),
+        result:
+          nextStep >= effectiveMaxStep ?
+            determineResult(histories, nextStep)
+          : null,
+      });
     },
 
     setScript: (index, script) => {

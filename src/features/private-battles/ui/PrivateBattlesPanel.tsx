@@ -8,6 +8,7 @@ import {
   createPrivateBattleAction,
   getPrivateBattleUsersAction,
 } from '@/app/private-battles/actions';
+import { usePollingRefresh } from '@/src/shared/lib/usePollingRefresh';
 import {
   type PrivateBattleListItem,
   type PrivateBattleUserOption,
@@ -74,6 +75,8 @@ export function PrivateBattlesPanel({
   currentUsername: string;
   initialBattles: PrivateBattleListItem[];
 }) {
+  usePollingRefresh(4000);
+
   const [battles, setBattles] = useState(initialBattles);
   const [opponentUsername, setOpponentUsername] = useState('');
   const [suggestions, setSuggestions] = useState<PrivateBattleUserOption[]>([]);
@@ -142,7 +145,9 @@ export function PrivateBattlesPanel({
         ]);
         setOpponentUsername('');
       } catch {
-        setErrorMessage('Не удалось создать комнату. Проверьте username и наличие открытого боя.')
+        setErrorMessage(
+          'Не удалось создать комнату. Проверьте username и наличие открытого боя.',
+        );
       } finally {
         setIsCreating(false);
       }
@@ -150,51 +155,55 @@ export function PrivateBattlesPanel({
   };
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
-      <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
+    <section className='rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm'>
+      <div className='flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-center lg:justify-between'>
         <div>
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-indigo-600">
-            <Swords className="h-3.5 w-3.5" />
-            Приватные бои
-          </div>
-          <h2 className="mt-2 text-lg font-semibold text-slate-950">
+          <h2 className='text-lg font-semibold text-slate-950'>
             Приглашение по username
           </h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Ваш username: <span className="font-semibold text-slate-900">@{currentUsername}</span>
+          <p className='mt-1 text-sm text-slate-600'>
+            Ваш username:{' '}
+            <span className='font-semibold text-slate-900'>
+              @{currentUsername}
+            </span>
           </p>
         </div>
 
-        <div className="w-full max-w-md">
-          <div className="flex gap-2">
+        <div className='w-full max-w-md'>
+          <div className='flex gap-2'>
             <input
-              type="text"
+              type='text'
               list={suggestionsId}
               value={opponentUsername}
               onChange={(event) => setOpponentUsername(event.target.value)}
-              placeholder="@username соперника"
-              className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-500"
+              placeholder='@username соперника'
+              className='flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-500'
             />
             <button
-              type="button"
+              type='button'
               onClick={handleCreateBattle}
               disabled={isCreating}
-              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className='inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50'
             >
-              <Plus className="h-4 w-4" />
+              <Plus className='h-4 w-4' />
               {isCreating ? 'Создание...' : 'Создать'}
             </button>
           </div>
 
           <datalist id={suggestionsId}>
             {suggestions.map((user) => (
-              <option key={user.id} value={`@${user.username}`}>
-                {user.display_name ? `${user.display_name} (@${user.username})` : `@${user.username}`}
+              <option
+                key={user.id}
+                value={`@${user.username}`}
+              >
+                {user.display_name ?
+                  `${user.display_name} (@${user.username})`
+                : `@${user.username}`}
               </option>
             ))}
           </datalist>
 
-          <p className="mt-2 text-xs text-slate-500">
+          <p className='mt-2 text-xs text-slate-500'>
             Поддерживается ввод с `@` и без него.
             {isSearching ? ' Ищем пользователей...' : ''}
           </p>
@@ -202,25 +211,28 @@ export function PrivateBattlesPanel({
       </div>
 
       {errorMessage && (
-        <p className="mt-3 text-sm text-rose-700">{errorMessage}</p>
+        <p className='mt-3 text-sm text-rose-700'>{errorMessage}</p>
       )}
 
-      <div className="mt-4 space-y-3">
-        {battles.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-600">
+      <div className='mt-4 space-y-3'>
+        {battles.length === 0 ?
+          <div className='rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-600'>
             Пока нет активных приватных комнат.
           </div>
-        ) : (
-          battles.map((battle) => {
+        : battles.map((battle) => {
             const isLeftUser = battle.current_user_slot === 'left';
             const currentUserName =
               isLeftUser ? battle.left_player_name : battle.right_player_name;
             const currentUserUsername =
-              isLeftUser ? battle.left_player_username : battle.right_player_username;
+              isLeftUser ?
+                battle.left_player_username
+              : battle.right_player_username;
             const opponentName =
               isLeftUser ? battle.right_player_name : battle.left_player_name;
             const opponentUsername =
-              isLeftUser ? battle.right_player_username : battle.left_player_username;
+              isLeftUser ?
+                battle.right_player_username
+              : battle.left_player_username;
             const currentUserReady =
               isLeftUser ? battle.left_ready : battle.right_ready;
             const opponentReady =
@@ -230,23 +242,25 @@ export function PrivateBattlesPanel({
               <Link
                 key={battle.id}
                 href={`/private-battles/${battle.id}`}
-                className="block rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:border-indigo-300 hover:bg-white"
+                className='block rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:border-indigo-300 hover:bg-white'
               >
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
                   <div>
-                    <div className="text-sm font-semibold text-slate-900">
+                    <div className='text-sm font-semibold text-slate-900'>
                       {currentUserName} vs {opponentName}
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">
+                    <div className='mt-1 text-xs text-slate-500'>
                       @{currentUserUsername} vs @{opponentUsername}
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {battle.has_result ? `Архив комнаты #${battle.id}` : `Комната #${battle.id}`}
+                    <div className='mt-1 text-xs text-slate-500'>
+                      {battle.has_result ?
+                        `Архив комнаты #${battle.id}`
+                      : `Комната #${battle.id}`}
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">
+                    <div className='mt-1 text-xs text-slate-500'>
                       Карта #{battle.map_revision}
                     </div>
-                    <div className="mt-2">
+                    <div className='mt-2'>
                       <span
                         className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${roomStateClasses(
                           battle,
@@ -256,22 +270,24 @@ export function PrivateBattlesPanel({
                       </span>
                     </div>
                     {battle.result_reason && (
-                      <div className="mt-2 text-xs text-slate-500">
+                      <div className='mt-2 text-xs text-slate-500'>
                         {battle.result_reason}
                       </div>
                     )}
-                    {battle.result_scores && battle.result_scores.length === 2 && (
-                      <div className="mt-1 text-xs text-slate-500">
-                        Счёт: 🔴 {battle.result_scores[0]} · 🟢 {battle.result_scores[1]}
-                      </div>
-                    )}
+                    {battle.result_scores &&
+                      battle.result_scores.length === 2 && (
+                        <div className='mt-1 text-xs text-slate-500'>
+                          Счёт: 🔴 {battle.result_scores[0]} · 🟢{' '}
+                          {battle.result_scores[1]}
+                        </div>
+                      )}
                   </div>
 
-                  <div className="flex gap-2 text-xs">
-                    <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-700">
+                  <div className='flex gap-2 text-xs'>
+                    <span className='rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-700'>
                       Вы: {readinessLabel(currentUserReady)}
                     </span>
-                    <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-700">
+                    <span className='rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-700'>
                       Соперник: {readinessLabel(opponentReady)}
                     </span>
                   </div>
@@ -279,7 +295,7 @@ export function PrivateBattlesPanel({
               </Link>
             );
           })
-        )}
+        }
       </div>
     </section>
   );

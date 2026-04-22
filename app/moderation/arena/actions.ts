@@ -24,22 +24,34 @@ async function assertAccess() {
     false;
 
   if (!hasAccess) {
-    throw new Error('Forbidden');
+    return false;
   }
+
+  return true;
 }
 
 function clampDimension(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-export async function setActiveBattleAction(formData: FormData) {
-  await assertAccess();
+export type ArenaActionState = {
+  error: string | null;
+  success: string | null;
+};
+
+export async function setActiveBattleAction(
+  _prevState: ArenaActionState,
+  formData: FormData,
+): Promise<ArenaActionState> {
+  if (!(await assertAccess())) {
+    return { error: 'Нет доступа', success: null };
+  }
 
   const leftPlayerId = Number(formData.get('left_player_id'));
   const rightPlayerId = Number(formData.get('right_player_id'));
 
   if (!leftPlayerId || !rightPlayerId) {
-    throw new Error('Invalid arena payload');
+    return { error: 'Выберите обоих игроков', success: null };
   }
 
   const currentBattle = await getActiveBattle();
@@ -48,23 +60,50 @@ export async function setActiveBattleAction(formData: FormData) {
     buildStaticArenaMapConfig(),
   );
 
-  await setActiveBattle(leftPlayerId, rightPlayerId, nextConfig);
+  try {
+    await setActiveBattle(leftPlayerId, rightPlayerId, nextConfig);
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Не удалось сохранить пару',
+      success: null,
+    };
+  }
+
   revalidatePath('/');
   revalidatePath('/moderation/arena');
   revalidatePath('/map-editor');
+
+  return { error: null, success: 'Пара сохранена' };
 }
 
-export async function clearActiveBattleAction() {
-  await assertAccess();
+export async function clearActiveBattleAction(): Promise<ArenaActionState> {
+  if (!(await assertAccess())) {
+    return { error: 'Нет доступа', success: null };
+  }
 
-  await clearActiveBattle();
+  try {
+    await clearActiveBattle();
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Не удалось снять бой',
+      success: null,
+    };
+  }
+
   revalidatePath('/');
   revalidatePath('/moderation/arena');
   revalidatePath('/map-editor');
+
+  return { error: null, success: 'Активный бой снят' };
 }
 
-export async function updateActiveBattleConfigAction(formData: FormData) {
-  await assertAccess();
+export async function updateActiveBattleConfigAction(
+  _prevState: ArenaActionState,
+  formData: FormData,
+): Promise<ArenaActionState> {
+  if (!(await assertAccess())) {
+    return { error: 'Нет доступа', success: null };
+  }
 
   const gameMode = formData.get('game_mode');
   const mapType = formData.get('map_type');
@@ -75,7 +114,7 @@ export async function updateActiveBattleConfigAction(formData: FormData) {
     (gameMode !== 'race' && gameMode !== 'duel') ||
     (mapType !== 'static' && mapType !== 'random')
   ) {
-    throw new Error('Invalid arena config payload');
+    return { error: 'Некорректные настройки арены', success: null };
   }
 
   const nextConfig =
@@ -87,9 +126,19 @@ export async function updateActiveBattleConfigAction(formData: FormData) {
         )
       : buildStaticArenaMapConfig(gameMode as ArenaGameMode);
 
-  await updateActiveBattleConfig(nextConfig);
+  try {
+    await updateActiveBattleConfig(nextConfig);
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : 'Не удалось сохранить настройки',
+      success: null,
+    };
+  }
 
   revalidatePath('/');
   revalidatePath('/moderation/arena');
   revalidatePath('/map-editor');
+
+  return { error: null, success: 'Настройки сохранены' };
 }

@@ -143,7 +143,19 @@ async function internalFetch(path: string, init?: RequestInit) {
   });
 
   if (!response.ok) {
-    throw new Error(`Internal API request failed: ${response.status}`);
+    let detail = `Internal API request failed: ${response.status}`;
+
+    try {
+      const payload = (await response.json()) as { detail?: string };
+
+      if (payload.detail) {
+        detail = payload.detail;
+      }
+    } catch {
+      // noop
+    }
+
+    throw new Error(detail);
   }
 
   return response;

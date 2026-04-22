@@ -20,6 +20,7 @@ import {
   sanitizeGrid,
 } from '@/src/app/model/map-editor-store';
 import { MAP_SIZE_LIMITS } from '@/src/app/model/game-store';
+import { ModerationNav } from '@/src/features/moderation/ui/ModerationNav';
 import { MapEditorGrid, ToolPalette } from '@/src/widgets/map-editor';
 import { applyCustomArenaMapAction } from '@/app/map-editor/actions';
 import type { ArenaMapConfig } from '@/src/shared/lib/arena-config';
@@ -231,6 +232,10 @@ export function MapEditorPageClient({
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="mb-4">
+        <ModerationNav />
+      </div>
+
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-indigo-600/80 mb-2">
@@ -261,8 +266,7 @@ export function MapEditorPageClient({
               <h2 className="text-sm font-semibold text-slate-950">Размер сетки</h2>
               <p className="text-xs text-slate-500 mt-1">
                 Доступно от {MAP_SIZE_LIMITS.minWidth}×{MAP_SIZE_LIMITS.minHeight}{' '}
-                до {MAP_SIZE_LIMITS.maxWidth}×{MAP_SIZE_LIMITS.maxHeight}. Периметр
-                всегда остаётся стеной.
+                до {MAP_SIZE_LIMITS.maxWidth}×{MAP_SIZE_LIMITS.maxHeight}.
               </p>
             </div>
 
@@ -412,7 +416,6 @@ export function MapEditorPageClient({
             <h3 className="text-sm font-semibold text-slate-950">Подсказки</h3>
             <ul className="mt-2 space-y-2 text-sm text-slate-600">
               <li>Спавны, ключи и выход должны быть доступны по проходам.</li>
-              <li>Периметр карты всегда остаётся стеной.</li>
               <li>Перед запуском боя лучше проверить карту валидатором.</li>
             </ul>
           </div>

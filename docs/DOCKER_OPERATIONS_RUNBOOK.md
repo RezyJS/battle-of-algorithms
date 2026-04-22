@@ -1,215 +1,129 @@
 # Docker Operations Runbook
 
-Команды для production-схемы, где:
+Команды для production-схемы:
 
 - `postgres` в Docker
 - `keycloak` в Docker
 - `backend` в Docker
 - `frontend` в Docker
-- `caddy` на хосте через `systemd`
+- `caddy` на VPS через `systemd`
 
-Документ предполагает, что проект лежит в:
-
-```bash
-/srv/battle-of-algorithms
-```
-
-И что основной compose-файл:
-
-```bash
-/srv/battle-of-algorithms/infra/docker-compose.yml
-```
-
-## 1. Базовые алиасы
-
-Чтобы не писать длинные команды каждый раз:
+Рабочая директория:
 
 ```bash
 cd /srv/battle-of-algorithms
-export BOA_COMPOSE="docker-compose -f infra/docker-compose.yml"
 ```
 
-## 2. Полный запуск всего стека
-
-Запуск контейнеров:
+Compose-файл:
 
 ```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml up -d
-sudo systemctl start caddy
-```
-
-Если после обновления кода нужны миграции:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml exec backend alembic upgrade head
-```
-
-## 3. Полная остановка
-
-Остановка reverse proxy:
-
-```bash
-sudo systemctl stop caddy
-```
-
-Остановка контейнеров:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml down
+infra/docker-compose.yml
 ```
 
 Важно:
 
-- `down` не удаляет данные Postgres
-- `down -v` удаляет volumes, использовать только если осознанно хочешь снести БД
+- `down -v` удаляет volume Postgres
 
-## 4. Перезапуск всего стека
+## 1. Запуск
+
+```bash
+cd /srv/battle-of-algorithms
+docker compose -f infra/docker-compose.yml up -d
+sudo systemctl start caddy
+```
+
+## 2. Запуск с пересборкой
+
+```bash
+cd /srv/battle-of-algorithms
+docker compose -f infra/docker-compose.yml up -d --build
+sudo systemctl restart caddy
+```
+
+## 3. Миграции
+
+```bash
+cd /srv/battle-of-algorithms
+docker compose -f infra/docker-compose.yml exec backend alembic upgrade head
+```
+
+Проверить текущую ревизию:
+
+```bash
+cd /srv/battle-of-algorithms
+docker compose -f infra/docker-compose.yml exec backend alembic current
+```
+
+## 4. Остановка
 
 ```bash
 sudo systemctl stop caddy
 cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml down
-docker-compose -f infra/docker-compose.yml up -d
-docker-compose -f infra/docker-compose.yml exec backend alembic upgrade head
+docker compose -f infra/docker-compose.yml down
+```
+
+## 5. Полный рестарт
+
+```bash
+sudo systemctl stop caddy
+cd /srv/battle-of-algorithms
+docker compose -f infra/docker-compose.yml down
+docker compose -f infra/docker-compose.yml up -d --build
+docker compose -f infra/docker-compose.yml exec backend alembic upgrade head
 sudo systemctl start caddy
 ```
 
-## 5. Обновление после `git pull`
+## 6. Деплой после `git pull`
 
 ```bash
 cd /srv/battle-of-algorithms
 git pull
-docker-compose -f infra/docker-compose.yml up -d --build
-docker-compose -f infra/docker-compose.yml exec backend alembic upgrade head
+docker compose -f infra/docker-compose.yml up -d --build
+docker compose -f infra/docker-compose.yml exec backend alembic upgrade head
 sudo systemctl restart caddy
 ```
 
-Если нужно пересобрать только один сервис:
+## 7. Проверка состояния
 
 ```bash
 cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml up -d --build backend
-docker-compose -f infra/docker-compose.yml up -d --build frontend
-```
-
-## 6. Проверка состояния
-
-Проверка контейнеров:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml ps
-```
-
-Проверка `Caddy`:
-
-```bash
+docker compose -f infra/docker-compose.yml ps
 sudo systemctl status caddy --no-pager
-```
-
-Проверка портов:
-
-```bash
 ss -tulpn | grep -E ':3000|:8000|:8080|:5432|:80|:443'
 ```
 
-## 7. Логи
+## 8. Логи
 
-Все контейнеры:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml logs --tail=100
-```
-
-Отдельные сервисы:
+Все сервисы:
 
 ```bash
 cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml logs --tail=100 postgres
-docker-compose -f infra/docker-compose.yml logs --tail=100 keycloak
-docker-compose -f infra/docker-compose.yml logs --tail=100 backend
-docker-compose -f infra/docker-compose.yml logs --tail=100 frontend
+docker compose -f infra/docker-compose.yml logs --tail 100
 ```
 
-Follow-режим:
+Отдельные:
 
 ```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml logs -f backend
-docker-compose -f infra/docker-compose.yml logs -f frontend
+docker logs --tail 100 boa-frontend
+docker logs --tail 100 boa-backend
+docker logs --tail 100 boa-keycloak
+docker logs --tail 100 boa-postgres
 ```
 
-Логи `Caddy`:
+`Caddy`:
 
 ```bash
 sudo journalctl -u caddy -n 100 --no-pager
 sudo journalctl -u caddy -f
 ```
 
-## 8. Миграции
-
-Применить миграции:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml exec backend alembic upgrade head
-```
-
-Посмотреть текущую ревизию:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml exec backend alembic current
-```
-
-История миграций:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml exec backend alembic history
-```
-
-## 9. Вход внутрь контейнеров
-
-Backend:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml exec backend sh
-```
-
-Frontend:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml exec frontend sh
-```
-
-Postgres:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml exec postgres psql -U boa -d battle_of_algorithms
-```
-
-Keycloak:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml exec keycloak sh
-```
-
-## 10. Health-check команды
+## 9. Health-check
 
 Внутренние:
 
 ```bash
-curl -I http://127.0.0.1:8000/docs
 curl -I http://127.0.0.1:3000
+curl -I http://127.0.0.1:8000/docs
 curl -I http://127.0.0.1:8080
 ```
 
@@ -220,166 +134,48 @@ curl -I https://boa.rezyjs.ru
 curl -I https://auth.boa.rezyjs.ru
 ```
 
-## 11. Если нужно пересобрать frontend с новыми env
-
-Если менялся `.env.docker` или фронтовые переменные:
+## 10. Вход в контейнеры
 
 ```bash
 cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml up -d --build frontend
+docker compose -f infra/docker-compose.yml exec frontend sh
+docker compose -f infra/docker-compose.yml exec backend sh
+docker compose -f infra/docker-compose.yml exec keycloak sh
+docker compose -f infra/docker-compose.yml exec postgres psql -U boa -d battle_of_algorithms
 ```
 
-Если менялся backend env:
+## 11. Пересборка только одного сервиса
 
 ```bash
 cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml up -d --build backend
+docker compose -f infra/docker-compose.yml up -d --build frontend
+docker compose -f infra/docker-compose.yml up -d --build backend
 ```
 
-## 12. Если нужно снести и поднять только приложение
+## 12. Если Keycloak только что поднялся
 
-Без удаления Postgres/Keycloak:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml stop frontend backend
-docker-compose -f infra/docker-compose.yml rm -f frontend backend
-docker-compose -f infra/docker-compose.yml up -d --build frontend backend
-docker-compose -f infra/docker-compose.yml exec backend alembic upgrade head
-```
-
-## 13. Если сломался только один контейнер
-
-Перезапуск:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml restart backend
-docker-compose -f infra/docker-compose.yml restart frontend
-docker-compose -f infra/docker-compose.yml restart keycloak
-docker-compose -f infra/docker-compose.yml restart postgres
-```
-
-Пересборка:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml up -d --build backend
-docker-compose -f infra/docker-compose.yml up -d --build frontend
-```
-
-## 14. Если нужен полностью чистый перезапуск без удаления БД
-
-```bash
-sudo systemctl stop caddy
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml down
-docker-compose -f infra/docker-compose.yml up -d --build
-docker-compose -f infra/docker-compose.yml exec backend alembic upgrade head
-sudo systemctl start caddy
-```
-
-## 15. Если нужно снести вообще всё, включая Postgres data
-
-Опасно. Удалит данные базы.
-
-```bash
-sudo systemctl stop caddy
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml down -v
-docker image rm infra_backend infra_frontend
-```
-
-Потом заново:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml up -d --build
-docker-compose -f infra/docker-compose.yml exec backend alembic upgrade head
-sudo systemctl start caddy
-```
-
-## 16. Проверка образов
-
-```bash
-docker images | grep -E 'infra_backend|infra_frontend'
-```
-
-## 17. Проверка почему контейнер не стартует
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml ps
-docker-compose -f infra/docker-compose.yml logs --tail=200 backend
-docker-compose -f infra/docker-compose.yml logs --tail=200 frontend
-docker-compose -f infra/docker-compose.yml logs --tail=200 keycloak
-docker-compose -f infra/docker-compose.yml logs --tail=200 postgres
-```
-
-Если проблема с reverse proxy:
-
-```bash
-sudo systemctl status caddy --no-pager
-sudo caddy validate --config /etc/caddy/Caddyfile
-sudo journalctl -u caddy -n 200 --no-pager
-```
-
-## 18. Что больше не использовать
-
-После переезда на Docker не нужно поднимать старые app unit'ы:
-
-```bash
-sudo systemctl start boa-backend
-sudo systemctl start boa-frontend
-```
-
-Эти unit'ы должны оставаться выключенными.
+Первые 20–60 секунд `auth` может отдавать `502`.
 
 Проверка:
 
 ```bash
-sudo systemctl is-enabled boa-backend
-sudo systemctl is-enabled boa-frontend
+curl -I http://127.0.0.1:8080
+docker logs --tail 100 boa-keycloak
 ```
 
-Нормально, если там:
+## 13. Если auth снова сломался
 
-```text
-disabled
-```
-
-## 19. Минимальный ежедневный набор команд
-
-Проверить:
+После неудачного входа сразу смотри:
 
 ```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml ps
-sudo systemctl status caddy --no-pager
+docker logs --tail 100 boa-frontend
+docker logs --tail 100 boa-backend
+docker logs --tail 100 boa-keycloak
 ```
 
-Обновить:
+## 14. Старые unit'ы приложения
 
 ```bash
-cd /srv/battle-of-algorithms
-git pull
-docker-compose -f infra/docker-compose.yml up -d --build
-docker-compose -f infra/docker-compose.yml exec backend alembic upgrade head
-sudo systemctl restart caddy
-```
-
-Остановить:
-
-```bash
-sudo systemctl stop caddy
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml down
-```
-
-Запустить:
-
-```bash
-cd /srv/battle-of-algorithms
-docker-compose -f infra/docker-compose.yml up -d
-sudo systemctl start caddy
+sudo systemctl start boa-backend
+sudo systemctl start boa-frontend
 ```

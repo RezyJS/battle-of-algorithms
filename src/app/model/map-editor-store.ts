@@ -48,22 +48,9 @@ function clampHeight(height: number): number {
   );
 }
 
-function isPerimeterCell(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-): boolean {
-  return x === 0 || y === 0 || x === width - 1 || y === height - 1;
-}
-
 function createGrid(width: number, height: number): FieldGrid {
   return Array.from({ length: height }, (_, y) =>
-    Array.from({ length: width }, (_, x) =>
-      isPerimeterCell(x, y, width, height)
-        ? FieldContent.WALL
-        : FieldContent.EMPTY,
-    ),
+    Array.from({ length: width }, () => FieldContent.EMPTY),
   );
 }
 
@@ -109,11 +96,11 @@ function resizeGrid(grid: FieldGrid, width: number, height: number): FieldGrid {
   const nextGrid = createGrid(width, height);
   const currentHeight = grid.length;
   const currentWidth = grid[0]?.length ?? 0;
-  const maxX = Math.min(currentWidth - 2, width - 2);
-  const maxY = Math.min(currentHeight - 2, height - 2);
+  const maxX = Math.min(currentWidth, width);
+  const maxY = Math.min(currentHeight, height);
 
-  for (let y = 1; y <= maxY; y++) {
-    for (let x = 1; x <= maxX; x++) {
+  for (let y = 0; y < maxY; y++) {
+    for (let x = 0; x < maxX; x++) {
       nextGrid[y][x] = grid[y][x];
     }
   }
@@ -122,8 +109,8 @@ function resizeGrid(grid: FieldGrid, width: number, height: number): FieldGrid {
 }
 
 function clearUniqueTool(grid: FieldGrid, tool: BrushType) {
-  for (let y = 1; y < grid.length - 1; y++) {
-    for (let x = 1; x < grid[y].length - 1; x++) {
+  for (let y = 0; y < grid.length; y++) {
+    for (let x = 0; x < grid[y].length; x++) {
       if (grid[y][x] === tool) {
         grid[y][x] = FieldContent.EMPTY;
       }
@@ -190,11 +177,7 @@ export const useMapEditorStore = create<MapEditorState>((set, get) => ({
   },
 
   paintCell: (x, y) => {
-    const { grid, width, height, activeTool } = get();
-
-    if (isPerimeterCell(x, y, width, height)) {
-      return;
-    }
+    const { grid, activeTool } = get();
 
     const nextGrid = cloneGrid(grid);
 
@@ -257,18 +240,6 @@ export const useMapEditorStore = create<MapEditorState>((set, get) => ({
     if (!exit) {
       set({ validationError: 'Нужно поставить ровно один выход.' });
       return false;
-    }
-
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        if (
-          isPerimeterCell(x, y, width, height) &&
-          grid[y][x] !== FieldContent.WALL
-        ) {
-          set({ validationError: 'Периметр карты должен состоять из стен.' });
-          return false;
-        }
-      }
     }
 
     const sanitizedGrid = sanitizeGrid(grid);

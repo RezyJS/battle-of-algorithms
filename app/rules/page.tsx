@@ -51,47 +51,6 @@ function getActiveSectionId(): string {
   return activeSectionId;
 }
 
-function FloatingNav() {
-  const [active, setActive] = useState('goal');
-
-  useEffect(() => {
-    const updateActive = () => {
-      setActive(getActiveSectionId());
-    };
-
-    updateActive();
-    window.addEventListener('scroll', updateActive, { passive: true });
-    window.addEventListener('resize', updateActive);
-    window.addEventListener('hashchange', updateActive);
-
-    return () => {
-      window.removeEventListener('scroll', updateActive);
-      window.removeEventListener('resize', updateActive);
-      window.removeEventListener('hashchange', updateActive);
-    };
-  }, []);
-
-  return (
-    <nav className="fixed right-6 top-1/2 -translate-y-1/2 z-50 hidden xl:flex flex-col gap-1 bg-white/85 backdrop-blur-sm border border-slate-200 rounded-xl p-2 shadow-sm">
-      {SECTIONS.map(({ id, label }) => (
-        <a
-          key={id}
-          href={`#${id}`}
-          onClick={() => setActive(id)}
-          className={cn(
-            'text-xs px-3 py-1.5 rounded-md transition-colors whitespace-nowrap',
-            active === id
-              ? 'bg-indigo-600 text-white'
-              : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100',
-          )}
-        >
-          {label}
-        </a>
-      ))}
-    </nav>
-  );
-}
-
 function Section({
   id,
   title,
@@ -104,9 +63,12 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div id={id} className="bg-white/80 rounded-xl border border-slate-200 p-6 scroll-mt-20 shadow-sm">
-      <h2 className="text-lg font-bold text-slate-950 mb-4 flex items-center gap-2">
-        <Icon className="w-5 h-5 text-indigo-600" />
+    <div
+      id={id}
+      className='bg-white/80 rounded-xl border border-slate-200 p-6 scroll-mt-20 shadow-sm'
+    >
+      <h2 className='text-lg font-bold text-slate-950 mb-4 flex items-center gap-2'>
+        <Icon className='w-5 h-5 text-indigo-600' />
         {title}
       </h2>
       {children}
@@ -117,42 +79,50 @@ function Section({
 export default function RulesPage() {
   return (
     <>
-      <FloatingNav />
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold">Правила</h1>
-          <p className="text-slate-600 text-sm mt-1">
+      <div className='max-w-4xl mx-auto px-4 py-6'>
+        <div className='mb-8'>
+          <h1 className='text-2xl font-bold'>Правила</h1>
+          <p className='text-slate-600 text-sm mt-1'>
             Всё что нужно знать о «Битве алгоритмов».
           </p>
         </div>
 
-        <div className="space-y-6">
-          <Section id="goal" title="Цель игры" icon={Target}>
-            <p className="text-slate-700 text-sm leading-relaxed">
-              Напишите алгоритм, который проведёт вашего оператора через
-              карту. Чтобы победить, оператору нужно <strong>подобрать хотя бы
-              один ключ</strong> и затем <strong>добраться до выхода</strong>.
-              В гонке карта может быть неизвестна заранее, а в дуэли она
-              фиксирована и позволяет строить более точную стратегию.
+        <div className='space-y-6'>
+          <Section
+            id='goal'
+            title='Цель игры'
+            icon={Target}
+          >
+            <p className='text-slate-700 text-sm leading-relaxed'>
+              Напишите алгоритм, который проведёт вашего оператора через карту.
+              Чтобы победить, оператору нужно{' '}
+              <strong>подобрать хотя бы один ключ</strong> и затем{' '}
+              <strong>добраться до выхода</strong>. В гонке карта может быть
+              неизвестна заранее, а в дуэли она фиксирована и позволяет строить
+              более точную стратегию.
             </p>
           </Section>
 
-          <Section id="modes" title="Режимы игры" icon={Swords}>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <h3 className="text-sm font-semibold text-slate-950">Гонка</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-700">
-                  Универсальный режим: карта может быть стандартной или
-                  случайно сгенерированной, а алгоритм не должен полагаться на
-                  знание раскладки заранее.
+          <Section
+            id='modes'
+            title='Режимы игры'
+            icon={Swords}
+          >
+            <div className='grid gap-3 md:grid-cols-2'>
+              <div className='rounded-lg border border-slate-200 bg-slate-50 p-4'>
+                <h3 className='text-sm font-semibold text-slate-950'>Гонка</h3>
+                <p className='mt-2 text-sm leading-relaxed text-slate-700'>
+                  Универсальный режим: карта может быть стандартной или случайно
+                  сгенерированной, а алгоритм не должен полагаться на знание
+                  раскладки заранее.
                 </p>
               </div>
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <h3 className="text-sm font-semibold text-slate-950">Дуэль</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-700">
+              <div className='rounded-lg border border-slate-200 bg-slate-50 p-4'>
+                <h3 className='text-sm font-semibold text-slate-950'>Дуэль</h3>
+                <p className='mt-2 text-sm leading-relaxed text-slate-700'>
                   Карта фиксирована, доступен{' '}
-                  <code className="rounded border border-indigo-100 bg-indigo-50 px-1.5 py-0.5 text-xs text-indigo-700">
+                  <code className='rounded border border-indigo-100 bg-indigo-50 px-1.5 py-0.5 text-xs text-indigo-700'>
                     getOpponentPosition()
                   </code>
                   , а через конструктор можно подготовить собственную арену и
@@ -162,15 +132,19 @@ export default function RulesPage() {
             </div>
           </Section>
 
-          <Section id="victory" title="Условия победы" icon={Trophy}>
-            <div className="space-y-3">
-              <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
+          <Section
+            id='victory'
+            title='Условия победы'
+            icon={Trophy}
+          >
+            <div className='space-y-3'>
+              <div className='flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-lg p-3'>
+                <CheckCircle2 className='w-5 h-5 text-emerald-600 mt-0.5 shrink-0' />
                 <div>
-                  <h3 className="text-sm font-semibold text-emerald-700">
+                  <h3 className='text-sm font-semibold text-emerald-700'>
                     Ранний выход
                   </h3>
-                  <p className="text-xs text-slate-600 mt-1">
+                  <p className='text-xs text-slate-600 mt-1'>
                     Если оба оператора смогли выйти, выигрывает тот, кто сделал
                     это раньше по шагам. Если выйти успел только один, он
                     побеждает автоматически.
@@ -178,13 +152,13 @@ export default function RulesPage() {
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <Timer className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+              <div className='flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3'>
+                <Timer className='w-5 h-5 text-amber-600 mt-0.5 shrink-0' />
                 <div>
-                  <h3 className="text-sm font-semibold text-amber-700">
+                  <h3 className='text-sm font-semibold text-amber-700'>
                     Одновременный финиш
                   </h3>
-                  <p className="text-xs text-slate-600 mt-1">
+                  <p className='text-xs text-slate-600 mt-1'>
                     Если оба оператора вышли на одном и том же шаге, система
                     фиксирует ничью. Дополнительного тай-брейка по «меньшему
                     числу ходов» сейчас нет.
@@ -192,83 +166,91 @@ export default function RulesPage() {
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 bg-rose-50 border border-rose-200 rounded-lg p-3">
-                <XCircle className="w-5 h-5 text-rose-600 mt-0.5 shrink-0" />
+              <div className='flex items-start gap-3 bg-rose-50 border border-rose-200 rounded-lg p-3'>
+                <XCircle className='w-5 h-5 text-rose-600 mt-0.5 shrink-0' />
                 <div>
-                  <h3 className="text-sm font-semibold text-rose-700">
+                  <h3 className='text-sm font-semibold text-rose-700'>
                     Таймаут и незавершённый бой
                   </h3>
-                  <p className="text-xs text-slate-600 mt-1">
+                  <p className='text-xs text-slate-600 mt-1'>
                     Если никто не выбрался, преимущество получает оператор,
-                    который хотя бы подобрал ключ. Если ключ есть у обоих или
-                    ни у кого, результатом будет ничья.
+                    который хотя бы подобрал ключ. Если ключ есть у обоих или ни
+                    у кого, результатом будет ничья.
                   </p>
                 </div>
               </div>
             </div>
           </Section>
 
-          <Section id="scoring" title="Система очков" icon={Zap}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+          <Section
+            id='scoring'
+            title='Система очков'
+            icon={Zap}
+          >
+            <div className='overflow-x-auto'>
+              <table className='w-full text-sm'>
                 <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="text-left py-2 text-slate-500 font-medium">
+                  <tr className='border-b border-slate-200'>
+                    <th className='text-left py-2 text-slate-500 font-medium'>
                       Действие
                     </th>
-                    <th className="text-right py-2 text-slate-500 font-medium">
+                    <th className='text-right py-2 text-slate-500 font-medium'>
                       Очки
                     </th>
                   </tr>
                 </thead>
-                <tbody className="text-slate-700">
-                  <tr className="border-b border-slate-200">
-                    <td className="py-2">Ключ есть в финальном состоянии</td>
-                    <td className="text-right font-mono text-emerald-600">
+                <tbody className='text-slate-700'>
+                  <tr className='border-b border-slate-200'>
+                    <td className='py-2'>Ключ есть в финальном состоянии</td>
+                    <td className='text-right font-mono text-emerald-600'>
                       +50
                     </td>
                   </tr>
-                  <tr className="border-b border-slate-200">
-                    <td className="py-2">Оператор вышел из лабиринта</td>
-                    <td className="text-right font-mono text-emerald-600">
+                  <tr className='border-b border-slate-200'>
+                    <td className='py-2'>Оператор вышел из лабиринта</td>
+                    <td className='text-right font-mono text-emerald-600'>
                       +100
                     </td>
                   </tr>
-                  <tr className="border-b border-slate-200">
-                    <td className="py-2">Бонус победителю за ранний выход</td>
-                    <td className="text-right font-mono text-emerald-600">
+                  <tr className='border-b border-slate-200'>
+                    <td className='py-2'>Бонус победителю за ранний выход</td>
+                    <td className='text-right font-mono text-emerald-600'>
                       +25
                     </td>
                   </tr>
                   <tr>
-                    <td className="py-2">Таймаут без выхода</td>
-                    <td className="text-right font-mono text-rose-600">0</td>
+                    <td className='py-2'>Таймаут без выхода</td>
+                    <td className='text-right font-mono text-rose-600'>0</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </Section>
 
-          <Section id="interaction" title="Правила взаимодействия" icon={Shield}>
-            <div className="space-y-2 text-sm text-slate-700">
-              <div className="flex items-start gap-2">
-                <span className="text-indigo-600 mt-0.5">1.</span>
+          <Section
+            id='interaction'
+            title='Правила взаимодействия'
+            icon={Shield}
+          >
+            <div className='space-y-2 text-sm text-slate-700'>
+              <div className='flex items-start gap-2'>
+                <span className='text-indigo-600 mt-0.5'>1.</span>
                 <p>
                   <strong>Блокировка:</strong> операторы не могут занимать одну
                   клетку. Если оператор пытается встать на занятую клетку, ход
                   не выполняется.
                 </p>
               </div>
-              <div className="flex items-start gap-2">
-                <span className="text-indigo-600 mt-0.5">2.</span>
+              <div className='flex items-start gap-2'>
+                <span className='text-indigo-600 mt-0.5'>2.</span>
                 <p>
                   <strong>Общие ключи:</strong> любой ключ может быть подобран
                   любым игроком. На карте может быть один или два ключа, а
                   оператору для выхода достаточно подобрать хотя бы один.
                 </p>
               </div>
-              <div className="flex items-start gap-2">
-                <span className="text-indigo-600 mt-0.5">3.</span>
+              <div className='flex items-start gap-2'>
+                <span className='text-indigo-600 mt-0.5'>3.</span>
                 <p>
                   <strong>Параллельное выполнение:</strong> оба алгоритма
                   выполняются независимо, после чего арена воспроизводит их
@@ -276,73 +258,77 @@ export default function RulesPage() {
                   соперника.
                 </p>
               </div>
-              <div className="flex items-start gap-2">
-                <span className="text-indigo-600 mt-0.5">4.</span>
+              <div className='flex items-start gap-2'>
+                <span className='text-indigo-600 mt-0.5'>4.</span>
                 <p>
-                  <strong>Кастомные карты:</strong> конструктор пропускает только
-                  карты с 2 спавнами, 1 выходом, 1–2 ключами, рамкой из стен и
-                  полной достижимостью целей от обоих игроков.
+                  <strong>Кастомные карты:</strong> конструктор пропускает
+                  только карты с 2 спавнами, 1 выходом, 1–2 ключами, рамкой из
+                  стен и полной достижимостью целей от обоих игроков.
                 </p>
               </div>
             </div>
           </Section>
 
-          <Section id="constraints" title="Ограничения" icon={AlertTriangle}>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+          <Section
+            id='constraints'
+            title='Ограничения'
+            icon={AlertTriangle}
+          >
+            <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3'>
+              <div className='bg-slate-50 border border-slate-200 rounded-lg p-3'>
+                <h4 className='text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1'>
                   Макс. шагов
                 </h4>
-                <p className="text-lg font-mono text-slate-950">1 000</p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className='text-lg font-mono text-slate-950'>1 000</p>
+                <p className='text-xs text-slate-500 mt-1'>
                   На одно выполнение скрипта
                 </p>
               </div>
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              <div className='bg-slate-50 border border-slate-200 rounded-lg p-3'>
+                <h4 className='text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1'>
                   Размер карты
                 </h4>
-                <p className="text-lg font-mono text-slate-950">
+                <p className='text-lg font-mono text-slate-950'>
                   {MAP_SIZE_LIMITS.minWidth}–{MAP_SIZE_LIMITS.maxWidth} ×{' '}
                   {MAP_SIZE_LIMITS.minHeight}–{MAP_SIZE_LIMITS.maxHeight}
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className='text-xs text-slate-500 mt-1'>
                   Для генератора и конструктора карт
                 </p>
               </div>
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              <div className='bg-slate-50 border border-slate-200 rounded-lg p-3'>
+                <h4 className='text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1'>
                   Язык
                 </h4>
-                <p className="text-lg font-mono text-slate-950">JavaScript</p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className='text-lg font-mono text-slate-950'>JavaScript</p>
+                <p className='text-xs text-slate-500 mt-1'>
                   Стандартный JS, без внешних библиотек
                 </p>
               </div>
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              <div className='bg-slate-50 border border-slate-200 rounded-lg p-3'>
+                <h4 className='text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1'>
                   API соперника
                 </h4>
-                <p className="text-lg font-mono text-slate-950">Только Duel</p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className='text-lg font-mono text-slate-950'>Только Duel</p>
+                <p className='text-xs text-slate-500 mt-1'>
                   `getOpponentPosition()` доступен лишь в режиме дуэли
                 </p>
               </div>
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              <div className='bg-slate-50 border border-slate-200 rounded-lg p-3'>
+                <h4 className='text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1'>
                   Запрещено
                 </h4>
-                <p className="text-lg font-mono text-slate-950">DOM / Сеть</p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className='text-lg font-mono text-slate-950'>DOM / Сеть</p>
+                <p className='text-xs text-slate-500 mt-1'>
                   Нет доступа к API браузера
                 </p>
               </div>
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              <div className='bg-slate-50 border border-slate-200 rounded-lg p-3'>
+                <h4 className='text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1'>
                   Редактор карт
                 </h4>
-                <p className="text-lg font-mono text-slate-950">/map-editor</p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className='text-lg font-mono text-slate-950'>/map-editor</p>
+                <p className='text-xs text-slate-500 mt-1'>
                   Кастомная карта применяется прямо в текущую игру
                 </p>
               </div>

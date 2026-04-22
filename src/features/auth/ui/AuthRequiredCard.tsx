@@ -1,3 +1,5 @@
+'use client';
+
 export function AuthRequiredCard({
   title = 'Нужна авторизация',
   description = 'Чтобы открыть этот раздел, войдите или создайте аккаунт.',

@@ -10,11 +10,11 @@ export function PrivateBattlesPageClient({
   initialBattles: PrivateBattleListItem[];
 }) {
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Приватные бои</h1>
-        <p className="text-slate-600 text-sm mt-1">
-          Создавайте комнаты по username, загружайте код и запускайте бой после двух подтверждений.
+    <div className='max-w-7xl mx-auto px-4 py-6'>
+      <div className='mb-6'>
+        <h1 className='text-2xl font-bold'>Приватные бои</h1>
+        <p className='text-slate-600 text-sm mt-1'>
+          Вызывайте других пользователей на дуэль.
         </p>
       </div>
 

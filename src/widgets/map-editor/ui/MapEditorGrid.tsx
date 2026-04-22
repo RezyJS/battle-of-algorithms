@@ -17,15 +17,6 @@ interface MapEditorGridProps {
   onPaint: (x: number, y: number) => void;
 }
 
-function isPerimeterCell(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-): boolean {
-  return x === 0 || y === 0 || x === width - 1 || y === height - 1;
-}
-
 function getPreviewContent(tool: BrushType): string {
   return tool === 'empty' ? 'empty' : tool;
 }
@@ -57,8 +48,6 @@ export function MapEditorGrid({
   const [isPainting, setIsPainting] = useState(false);
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
   const lastPaintedCellRef = useRef<string | null>(null);
-  const height = grid.length;
-  const width = grid[0]?.length ?? 0;
   const previewContent = getPreviewContent(activeTool);
 
   useEffect(() => {
@@ -92,9 +81,6 @@ export function MapEditorGrid({
     y: number,
   ) => {
     event.preventDefault();
-    if (isPerimeterCell(x, y, width, height)) {
-      return;
-    }
     setIsPainting(true);
     paint(x, y);
   };
@@ -114,7 +100,6 @@ export function MapEditorGrid({
           {row.map((cell, x) => {
             const key = `${x},${y}`;
             const isHovered = hoveredCell === key;
-            const locked = isPerimeterCell(x, y, width, height);
 
             return (
               <Cell
@@ -122,10 +107,9 @@ export function MapEditorGrid({
                 content={cell}
                 className={cn(
                   'cursor-crosshair',
-                  locked && 'cursor-not-allowed',
-                  isPainting && !locked && 'ring-1 ring-indigo-400/30',
+                  isPainting && 'ring-1 ring-indigo-400/30',
                 )}
-                title={locked ? 'Периметр карты всегда остаётся стеной' : getCellTitle(cell)}
+                title={getCellTitle(cell)}
                 onMouseDown={(event) => handleMouseDown(event, x, y)}
                 onMouseEnter={() => {
                   setHoveredCell(key);
@@ -136,7 +120,7 @@ export function MapEditorGrid({
                   setHoveredCell((current) => (current === key ? null : current));
                 }}
               >
-                {isHovered && !locked && (
+                {isHovered && (
                   <div
                     className={cn(
                       'absolute inset-0 rounded-sm border pointer-events-none flex items-center justify-center text-xl font-bold opacity-70',

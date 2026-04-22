@@ -1,5 +1,6 @@
 'use client';
 
+import { useActionState } from 'react';
 import { Eye, FileCode2, MessageSquareText } from 'lucide-react';
 
 import { updateSubmissionStatusAction } from '@/app/moderation/actions';
@@ -50,6 +51,10 @@ export function ModerationSubmissionCard({
 }: {
   submission: ModerationSubmission;
 }) {
+  const [actionState, formAction] = useActionState(updateSubmissionStatusAction, {
+    error: null,
+    success: null,
+  });
   const stats = getCodeStats(submission.code);
   const submittedAt = formatDate(submission.submitted_at);
   const createdAt = formatDate(submission.created_at);
@@ -144,7 +149,7 @@ export function ModerationSubmissionCard({
                       </p>
                     </div>
 
-                    <form action={updateSubmissionStatusAction} className="mt-3 flex flex-col gap-3">
+                    <form action={formAction} className="mt-3 flex flex-col gap-3">
                       <input
                         type="hidden"
                         name="submission_id"
@@ -158,6 +163,14 @@ export function ModerationSubmissionCard({
                         defaultValue={submission.moderation_comment ?? ''}
                         className="w-full rounded-md border px-3 py-2 text-sm"
                       />
+
+                      {actionState.error && (
+                        <p className="text-sm text-rose-600">{actionState.error}</p>
+                      )}
+
+                      {actionState.success && (
+                        <p className="text-sm text-emerald-600">{actionState.success}</p>
+                      )}
 
                       <SheetFooter>
                         <div className="flex flex-wrap gap-2">
