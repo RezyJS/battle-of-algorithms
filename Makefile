@@ -3,7 +3,7 @@ COMPOSE_FILE=infra/docker-compose.yml
 BACKEND_VENV=backend/.venv
 BACKEND_UVICORN=$(BACKEND_VENV)/bin/uvicorn
 
-.PHONY: up down logs build restart infra-up infra-down infra-logs frontend-dev backend-dev backend-seed dev
+.PHONY: up down logs build restart ps migrate infra-up infra-down infra-logs frontend-dev backend-dev backend-seed dev
 
 up:
 	$(COMPOSE) -f $(COMPOSE_FILE) up -d
@@ -20,6 +20,12 @@ logs:
 restart:
 	$(COMPOSE) -f $(COMPOSE_FILE) down
 	$(COMPOSE) -f $(COMPOSE_FILE) up -d --build
+
+ps:
+	$(COMPOSE) -f $(COMPOSE_FILE) ps
+
+migrate:
+	$(COMPOSE) -f $(COMPOSE_FILE) exec backend alembic upgrade head
 
 # Backward-compatible aliases for the old naming.
 infra-up: up
