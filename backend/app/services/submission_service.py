@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, aliased
 
 from app.models.audit_log import AuditLog
@@ -122,6 +122,83 @@ def list_submissions_for_moderation(db: Session) -> list[SubmissionListItem]:
         )
         for submission, author, moderator_user in rows
     ]
+
+
+def list_submissions_for_moderation_page(
+    db: Session,
+    *,
+    page: int,
+    page_size: int,
+    status: SubmissionStatus | None = None,
+    query: str | None = None,
+) -> tuple[list[SubmissionListItem], int]:
+    moderator = aliased(User)
+    filters = []
+
+    if status:
+        filters.append(CodeSubmission.status == status)
+
+    normalized_query = (query or "").strip()
+    if normalized_query:
+        search_pattern = f"%{normalized_query}%"
+        filters.append(
+            or_(
+                User.username.ilike(search_pattern),
+                User.display_name.ilike(search_pattern),
+                CodeSubmission.moderation_comment.ilike(search_pattern),
+            )
+        )
+
+    base_query = (
+        select(CodeSubmission, User, moderator)
+        .join(User, CodeSubmission.user_id == User.id)
+        .outerjoin(moderator, CodeSubmission.moderated_by == moderator.id)
+    )
+
+    if filters:
+        base_query = base_query.where(*filters)
+
+    rows = db.execute(
+        base_query
+        .order_by(CodeSubmission.created_at.desc(), CodeSubmission.id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    ).all()
+
+    count_query = (
+        select(func.count(CodeSubmission.id))
+        .select_from(CodeSubmission)
+        .join(User, CodeSubmission.user_id == User.id)
+    )
+    if filters:
+        count_query = count_query.where(*filters)
+
+    total = db.scalar(count_query) or 0
+
+    return (
+        [
+            SubmissionListItem(
+                id=submission.id,
+                user_id=author.id,
+                username=author.username,
+                display_name=author.display_name,
+                battle_id=submission.battle_id,
+                code=submission.code,
+                language=submission.language,
+                status=submission.status,
+                version=submission.version,
+                moderation_comment=submission.moderation_comment,
+                submitted_at=submission.submitted_at,
+                moderated_at=submission.moderated_at,
+                moderated_by=submission.moderated_by,
+                moderator_username=moderator_user.username if moderator_user else None,
+                created_at=submission.created_at,
+                updated_at=submission.updated_at,
+            )
+            for submission, author, moderator_user in rows
+        ],
+        total,
+    )
 
 
 def update_submission_status(

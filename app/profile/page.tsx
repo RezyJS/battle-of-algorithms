@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 import { AuthRequiredCard } from '@/src/features/auth/ui/AuthRequiredCard';
 import { getCurrentUser } from '@/src/shared/lib/auth/session';
 

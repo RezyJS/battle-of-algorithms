@@ -38,25 +38,28 @@ Backend:
 cp backend/.env.example backend/.env
 ```
 
+Docker Compose:
+
+```bash
+cp infra/postgres.env.example infra/postgres.env
+cp infra/keycloak.env.example infra/keycloak.env
+cp infra/backend.env.example infra/backend.env
+cp infra/frontend.env.example infra/frontend.env
+```
+
 ## Запуск инфраструктуры
 
 Перед запуском убедись, что `Docker Desktop` открыт и docker daemon запущен.
 
-Если нужно поднять всё dev-окружение одной командой:
+Если нужно поднять контейнерное окружение одной командой:
 
 ```bash
 make dev
 ```
 
-Эта команда:
+Эта команда поднимет `postgres`, `keycloak`, `backend` и `frontend` через `docker-compose`.
 
-- поднимет `postgres` и `keycloak` через `docker-compose`;
-- запустит backend на `:8000`;
-- запустит frontend на `:3000`.
-
-Остановить frontend/backend можно `Ctrl+C`, а инфраструктуру потом выключить `make infra-down`.
-
-Если хочешь запускать по частям:
+Если хочешь запускать только контейнеры:
 
 ```bash
 make infra-up
@@ -68,14 +71,7 @@ make infra-up
 docker-compose -f infra/docker-compose.yml up -d
 ```
 
-Локальные учётные данные dev-окружения:
-
-- Postgres DB: `battle_of_algorithms`
-- Postgres user: `boa`
-- Postgres password: `boa`
-- Keycloak admin: `admin`
-- Keycloak admin password: `admin`
-- Keycloak URL: `http://localhost:8080`
+Локальные учётные данные и секреты теперь задаются только через `infra/*.env`.
 
 Тестовые пользователи Keycloak:
 

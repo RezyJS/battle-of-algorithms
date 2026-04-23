@@ -1,341 +1,392 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import {
-  Trophy,
-  Target,
-  Shield,
-  Zap,
   AlertTriangle,
-  CheckCircle2,
-  XCircle,
+  Bot,
+  Compass,
+  Flag,
+  KeyRound,
+  Layers3,
+  Map,
+  ShieldCheck,
   Swords,
-  Timer,
+  Trophy,
 } from 'lucide-react';
-import { cn } from '@/src/shared/lib/utils';
+
 import { MAP_SIZE_LIMITS } from '@/src/app/model/game-store';
 
-const SECTIONS = [
-  { id: 'goal', label: 'Цель' },
-  { id: 'modes', label: 'Режимы' },
-  { id: 'victory', label: 'Победа' },
-  { id: 'scoring', label: 'Очки' },
-  { id: 'interaction', label: 'Правила' },
-  { id: 'constraints', label: 'Ограничения' },
+const mapModes = [
+  {
+    title: 'Фиксированная',
+    note: 'Для базового сравнения стратегий на одной и той же схеме.',
+  },
+  {
+    title: 'Случайная',
+    note: 'Для проверки устойчивости решения на новой раскладке.',
+  },
+  {
+    title: 'Из конструктора',
+    note: 'Для ручных сценариев и обмена конкретной картой по коду.',
+  },
 ];
 
-function getActiveSectionId(): string {
-  const lastSectionId = SECTIONS[SECTIONS.length - 1]?.id ?? 'goal';
+const preflightChecks = [
+  'Прогон на фиксированной карте',
+  'Несколько запусков на случайной карте',
+  'Один сценарий на своей карте из конструктора',
+];
 
-  if (
-    window.innerHeight + window.scrollY >=
-    document.documentElement.scrollHeight - 24
-  ) {
-    return lastSectionId;
-  }
-
-  const marker = window.innerHeight * 0.35;
-  let activeSectionId = SECTIONS[0]?.id ?? 'goal';
-
-  for (const { id } of SECTIONS) {
-    const section = document.getElementById(id);
-    if (!section) {
-      continue;
-    }
-
-    if (section.getBoundingClientRect().top <= marker) {
-      activeSectionId = id;
-    }
-  }
-
-  return activeSectionId;
-}
-
-function Section({
-  id,
-  title,
-  icon: Icon,
-  children,
-}: {
-  id: string;
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      id={id}
-      className='bg-white/80 rounded-xl border border-slate-200 p-6 scroll-mt-20 shadow-sm'
-    >
-      <h2 className='text-lg font-bold text-slate-950 mb-4 flex items-center gap-2'>
-        <Icon className='w-5 h-5 text-indigo-600' />
-        {title}
-      </h2>
-      {children}
-    </div>
-  );
-}
+const scoreRows = [
+  ['Ключ в финальном состоянии', '+50'],
+  ['Выход из лабиринта', '+100'],
+  ['Более ранний выход', '+25'],
+];
 
 export default function RulesPage() {
   return (
-    <>
-      <div className='max-w-4xl mx-auto px-4 py-6'>
-        <div className='mb-8'>
-          <h1 className='text-2xl font-bold'>Правила</h1>
-          <p className='text-slate-600 text-sm mt-1'>
-            Всё что нужно знать о «Битве алгоритмов».
+    <div className="mx-auto max-w-7xl px-4 py-8">
+      <header className="mb-8">
+        <p className="text-xs uppercase tracking-[0.34em] text-indigo-600">
+          Battle of Algorithms
+        </p>
+        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
+          Правила
+        </h1>
+      </header>
+
+      <section className="grid gap-5 xl:grid-cols-12">
+        <article className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_18px_60px_-44px_rgba(15,23,42,0.32)] xl:col-span-7">
+          <div className="grid h-full gap-0 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="p-6 sm:p-7">
+              <div className="inline-flex rounded-2xl bg-amber-100 p-3 text-amber-700">
+                <Trophy className="h-5 w-5" />
+              </div>
+              <h2 className="mt-5 text-2xl font-semibold tracking-tight text-slate-950">
+                Как победить
+              </h2>
+              <div className="mt-5 space-y-4 text-sm leading-7 text-slate-700">
+                <p>
+                  Цель простая: подобрать хотя бы один ключ и довести оператора
+                  до выхода.
+                </p>
+                <p>
+                  Если вышли оба, выигрывает тот, кто сделал это раньше. Если
+                  выйти смог только один, бой уходит ему.
+                </p>
+                <p>
+                  Если никто не вышел, система смотрит, кто хотя бы дошёл до
+                  ключа. Если это не помогло различить игроков, фиксируется
+                  ничья.
+                </p>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 bg-[linear-gradient(180deg,#fff7ed_0%,#ffffff_100%)] p-6 lg:border-l lg:border-t-0">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                Очки
+              </p>
+              <div className="mt-5 space-y-3">
+                {scoreRows.map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="flex items-center justify-between rounded-2xl border border-white bg-white/90 px-4 py-3 shadow-sm"
+                  >
+                    <span className="max-w-[14rem] text-sm leading-6 text-slate-700">
+                      {label}
+                    </span>
+                    <span className="text-lg font-semibold text-emerald-600">
+                      {value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article className="rounded-[2rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f3f6ff_100%)] p-6 shadow-[0_18px_60px_-44px_rgba(15,23,42,0.32)] xl:col-span-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                Режимы
+              </p>
+              <h2 className="mt-4 text-2xl font-semibold text-slate-950">
+                Гонка и дуэль
+              </h2>
+            </div>
+            <div className="rounded-2xl bg-indigo-100 p-3 text-indigo-700">
+              <Swords className="h-5 w-5" />
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-3">
+            <div className="rounded-[1.4rem] border border-indigo-100 bg-white/90 p-4">
+              <p className="text-sm font-semibold text-slate-950">Гонка</p>
+              <p className="mt-2 text-sm leading-7 text-slate-700">
+                Проверяет, умеет ли стратегия жить на разных раскладках. Карта
+                может быть фиксированной, случайной или пользовательской.
+              </p>
+            </div>
+            <div className="rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-950">Дуэль</p>
+              <p className="mt-2 text-sm leading-7 text-slate-700">
+                Позволяет учитывать соперника через `getOpponentPosition()` и
+                подстраивать тактику под конкретную арену.
+              </p>
+            </div>
+          </div>
+        </article>
+
+        <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_-44px_rgba(15,23,42,0.32)] xl:col-span-4">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-2xl font-semibold text-slate-950">Карты</h2>
+            <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
+              <Map className="h-5 w-5" />
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {mapModes.map((mode, index) => (
+              <div
+                key={mode.title}
+                className="rounded-[1.4rem] border border-slate-200 p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-950">
+                    {mode.title}
+                  </p>
+                  <span className="text-xs uppercase tracking-[0.24em] text-slate-400">
+                    0{index + 1}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-7 text-slate-600">
+                  {mode.note}
+                </p>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,#fff 0%,#fff5f1 100%)] shadow-[0_18px_60px_-44px_rgba(15,23,42,0.32)] xl:col-span-8">
+          <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
+            <div className="p-6 sm:p-7">
+              <div className="inline-flex rounded-2xl bg-rose-100 p-3 text-rose-700">
+                <Bot className="h-5 w-5" />
+              </div>
+              <h2 className="mt-5 text-2xl font-semibold text-slate-950">
+                Что делать перед отправкой
+              </h2>
+              <ol className="mt-6 space-y-3">
+                {preflightChecks.map((item, index) => (
+                  <li
+                    key={item}
+                    className="flex items-start gap-3 rounded-[1.3rem] border border-white bg-white/80 px-4 py-3 shadow-sm"
+                  >
+                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-950 text-xs font-semibold text-white">
+                      {index + 1}
+                    </span>
+                    <span className="text-sm leading-7 text-slate-700">
+                      {item}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <div className="border-t border-rose-100 bg-white/70 p-6 lg:border-l lg:border-t-0">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                Тестовая арена
+              </p>
+              <p className="mt-4 text-sm leading-7 text-slate-700">
+                Здесь можно запустить тестовый бой против шаблонного соперника и
+                выбрать, на какой карте проверять алгоритм: фиксированной,
+                случайной или своей из конструктора.
+              </p>
+              <div className="mt-6 grid grid-cols-3 gap-3">
+                <div className="aspect-square rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(135deg,#eef2ff_0%,#fff_100%)] p-3">
+                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                    Fixed
+                  </p>
+                  <div className="mt-4 grid grid-cols-3 gap-1.5">
+                    {Array.from({ length: 9 }).map((_, cellIndex) => (
+                      <div
+                        key={`fixed-${cellIndex}`}
+                        className={`h-5 rounded-md ${
+                          cellIndex < 4 ? 'bg-slate-300' : 'bg-white'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="aspect-square rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(135deg,#ecfeff_0%,#fff_100%)] p-3">
+                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                    Random
+                  </p>
+                  <div className="mt-4 grid grid-cols-3 gap-1.5">
+                    {['bg-cyan-200', 'bg-white', 'bg-cyan-100', 'bg-white', 'bg-cyan-300', 'bg-white', 'bg-cyan-100', 'bg-white', 'bg-cyan-200'].map(
+                      (className, cellIndex) => (
+                        <div
+                          key={`random-${cellIndex}`}
+                          className={`h-5 rounded-md ${className}`}
+                        />
+                      ),
+                    )}
+                  </div>
+                </div>
+                <div className="aspect-square rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(135deg,#f5f3ff_0%,#fff_100%)] p-3">
+                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                    Custom
+                  </p>
+                  <div className="mt-4 grid grid-cols-3 gap-1.5">
+                    {['bg-violet-200', 'bg-white', 'bg-yellow-200', 'bg-white', 'bg-violet-100', 'bg-white', 'bg-white', 'bg-emerald-200', 'bg-white'].map(
+                      (className, cellIndex) => (
+                        <div
+                          key={`custom-${cellIndex}`}
+                          className={`h-5 rounded-md ${className}`}
+                        />
+                      ),
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article className="rounded-[2rem] border border-slate-200 bg-[linear-gradient(180deg,#f6f3ff_0%,#ffffff_100%)] p-6 shadow-[0_18px_60px_-44px_rgba(15,23,42,0.32)] xl:col-span-4">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-2xl font-semibold text-slate-950">
+              Seed и код карты
+            </h2>
+            <div className="rounded-2xl bg-violet-100 p-3 text-violet-700">
+              <Layers3 className="h-5 w-5" />
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-4">
+            <div className="rounded-[1.4rem] border border-violet-100 bg-white/80 p-4">
+              <p className="text-xs uppercase tracking-[0.24em] text-violet-500">
+                Seed
+              </p>
+              <p className="mt-2 text-sm leading-7 text-slate-700">
+                Нужен для повторяемой генерации случайной карты. Один и тот же
+                seed при одинаковом размере даёт одинаковый результат.
+              </p>
+            </div>
+            <div className="rounded-[1.4rem] border border-cyan-100 bg-white/80 p-4">
+              <p className="text-xs uppercase tracking-[0.24em] text-cyan-600">
+                Код карты
+              </p>
+              <p className="mt-2 text-sm leading-7 text-slate-700">
+                Нужен для обмена конкретной конфигурацией. Восстанавливает карту
+                один в один, даже после ручных правок.
+              </p>
+            </div>
+          </div>
+        </article>
+
+        <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_-44px_rgba(15,23,42,0.32)] xl:col-span-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                Комнаты
+              </p>
+              <h2 className="mt-4 text-2xl font-semibold text-slate-950">
+                Приватный бой
+              </h2>
+            </div>
+            <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-950">1. Код</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Игроки договариваются о комнате и конфигурации.
+              </p>
+            </div>
+            <div className="rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-950">2. Готовность</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Подтверждение идёт отдельно от выбора карты и кода.
+              </p>
+            </div>
+            <div className="rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-950">3. Старт</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                После запуска комната становится read-only.
+              </p>
+            </div>
+          </div>
+        </article>
+
+        <article className="rounded-[2rem] border border-slate-200 bg-[linear-gradient(180deg,#f0fdfa_0%,#ffffff_100%)] p-6 shadow-[0_18px_60px_-44px_rgba(15,23,42,0.32)] xl:col-span-6">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-2xl font-semibold text-slate-950">
+              Проверки конструктора
+            </h2>
+            <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
+              <Compass className="h-5 w-5" />
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            <div className="flex items-start gap-3 rounded-[1.4rem] border border-emerald-100 bg-white/80 p-4">
+              <Flag className="mt-1 h-4 w-4 shrink-0 text-emerald-600" />
+              <p className="text-sm leading-7 text-slate-700">
+                На карте должны быть два спавна, выход и хотя бы один ключ.
+              </p>
+            </div>
+            <div className="flex items-start gap-3 rounded-[1.4rem] border border-emerald-100 bg-white/80 p-4">
+              <KeyRound className="mt-1 h-4 w-4 shrink-0 text-emerald-600" />
+              <p className="text-sm leading-7 text-slate-700">
+                Для обоих операторов проверяется достижимость ключей и выхода.
+              </p>
+            </div>
+            <div className="flex items-start gap-3 rounded-[1.4rem] border border-emerald-100 bg-white/80 p-4">
+              <Map className="mt-1 h-4 w-4 shrink-0 text-emerald-600" />
+              <p className="text-sm leading-7 text-slate-700">
+                Размер ограничен диапазоном от {MAP_SIZE_LIMITS.minWidth}×
+                {MAP_SIZE_LIMITS.minHeight} до {MAP_SIZE_LIMITS.maxWidth}×
+                {MAP_SIZE_LIMITS.maxHeight}.
+              </p>
+            </div>
+          </div>
+        </article>
+
+        <article className="rounded-[2rem] border border-rose-200 bg-[linear-gradient(180deg,#fff1f2_0%,#ffffff_100%)] p-6 shadow-[0_18px_60px_-44px_rgba(15,23,42,0.32)] xl:col-span-5">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-2xl font-semibold text-slate-950">Ограничения</h2>
+            <div className="rounded-2xl bg-rose-100 p-3 text-rose-700">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+          </div>
+
+          <ul className="mt-6 space-y-3 text-sm leading-7 text-slate-700">
+            <li className="rounded-[1.4rem] border border-white bg-white/80 px-4 py-3">
+              Нет внешних библиотек и сетевых запросов.
+            </li>
+            <li className="rounded-[1.4rem] border border-white bg-white/80 px-4 py-3">
+              Нет доступа к DOM и браузерному окружению.
+            </li>
+            <li className="rounded-[1.4rem] border border-white bg-white/80 px-4 py-3">
+              Есть лимит шагов, поэтому тяжёлые и бесконечные циклы ломают
+              стратегию.
+            </li>
+          </ul>
+        </article>
+
+        <article className="rounded-[2rem] border border-slate-200 bg-[linear-gradient(180deg,#eef4ff_0%,#ffffff_100%)] px-6 py-7 shadow-[0_18px_60px_-44px_rgba(15,23,42,0.32)] xl:col-span-7">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+            Коротко
           </p>
-        </div>
-
-        <div className='space-y-6'>
-          <Section
-            id='goal'
-            title='Цель игры'
-            icon={Target}
-          >
-            <p className='text-slate-700 text-sm leading-relaxed'>
-              Напишите алгоритм, который проведёт вашего оператора через карту.
-              Чтобы победить, оператору нужно{' '}
-              <strong>подобрать хотя бы один ключ</strong> и затем{' '}
-              <strong>добраться до выхода</strong>. В гонке карта может быть
-              неизвестна заранее, а в дуэли она фиксирована и позволяет строить
-              более точную стратегию.
-            </p>
-          </Section>
-
-          <Section
-            id='modes'
-            title='Режимы игры'
-            icon={Swords}
-          >
-            <div className='grid gap-3 md:grid-cols-2'>
-              <div className='rounded-lg border border-slate-200 bg-slate-50 p-4'>
-                <h3 className='text-sm font-semibold text-slate-950'>Гонка</h3>
-                <p className='mt-2 text-sm leading-relaxed text-slate-700'>
-                  Универсальный режим: карта может быть стандартной или случайно
-                  сгенерированной, а алгоритм не должен полагаться на знание
-                  раскладки заранее.
-                </p>
-              </div>
-
-              <div className='rounded-lg border border-slate-200 bg-slate-50 p-4'>
-                <h3 className='text-sm font-semibold text-slate-950'>Дуэль</h3>
-                <p className='mt-2 text-sm leading-relaxed text-slate-700'>
-                  Карта фиксирована, доступен{' '}
-                  <code className='rounded border border-indigo-100 bg-indigo-50 px-1.5 py-0.5 text-xs text-indigo-700'>
-                    getOpponentPosition()
-                  </code>
-                  , а через конструктор можно подготовить собственную арену и
-                  загрузить её в игру.
-                </p>
-              </div>
-            </div>
-          </Section>
-
-          <Section
-            id='victory'
-            title='Условия победы'
-            icon={Trophy}
-          >
-            <div className='space-y-3'>
-              <div className='flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-lg p-3'>
-                <CheckCircle2 className='w-5 h-5 text-emerald-600 mt-0.5 shrink-0' />
-                <div>
-                  <h3 className='text-sm font-semibold text-emerald-700'>
-                    Ранний выход
-                  </h3>
-                  <p className='text-xs text-slate-600 mt-1'>
-                    Если оба оператора смогли выйти, выигрывает тот, кто сделал
-                    это раньше по шагам. Если выйти успел только один, он
-                    побеждает автоматически.
-                  </p>
-                </div>
-              </div>
-
-              <div className='flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3'>
-                <Timer className='w-5 h-5 text-amber-600 mt-0.5 shrink-0' />
-                <div>
-                  <h3 className='text-sm font-semibold text-amber-700'>
-                    Одновременный финиш
-                  </h3>
-                  <p className='text-xs text-slate-600 mt-1'>
-                    Если оба оператора вышли на одном и том же шаге, система
-                    фиксирует ничью. Дополнительного тай-брейка по «меньшему
-                    числу ходов» сейчас нет.
-                  </p>
-                </div>
-              </div>
-
-              <div className='flex items-start gap-3 bg-rose-50 border border-rose-200 rounded-lg p-3'>
-                <XCircle className='w-5 h-5 text-rose-600 mt-0.5 shrink-0' />
-                <div>
-                  <h3 className='text-sm font-semibold text-rose-700'>
-                    Таймаут и незавершённый бой
-                  </h3>
-                  <p className='text-xs text-slate-600 mt-1'>
-                    Если никто не выбрался, преимущество получает оператор,
-                    который хотя бы подобрал ключ. Если ключ есть у обоих или ни
-                    у кого, результатом будет ничья.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Section>
-
-          <Section
-            id='scoring'
-            title='Система очков'
-            icon={Zap}
-          >
-            <div className='overflow-x-auto'>
-              <table className='w-full text-sm'>
-                <thead>
-                  <tr className='border-b border-slate-200'>
-                    <th className='text-left py-2 text-slate-500 font-medium'>
-                      Действие
-                    </th>
-                    <th className='text-right py-2 text-slate-500 font-medium'>
-                      Очки
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className='text-slate-700'>
-                  <tr className='border-b border-slate-200'>
-                    <td className='py-2'>Ключ есть в финальном состоянии</td>
-                    <td className='text-right font-mono text-emerald-600'>
-                      +50
-                    </td>
-                  </tr>
-                  <tr className='border-b border-slate-200'>
-                    <td className='py-2'>Оператор вышел из лабиринта</td>
-                    <td className='text-right font-mono text-emerald-600'>
-                      +100
-                    </td>
-                  </tr>
-                  <tr className='border-b border-slate-200'>
-                    <td className='py-2'>Бонус победителю за ранний выход</td>
-                    <td className='text-right font-mono text-emerald-600'>
-                      +25
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className='py-2'>Таймаут без выхода</td>
-                    <td className='text-right font-mono text-rose-600'>0</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </Section>
-
-          <Section
-            id='interaction'
-            title='Правила взаимодействия'
-            icon={Shield}
-          >
-            <div className='space-y-2 text-sm text-slate-700'>
-              <div className='flex items-start gap-2'>
-                <span className='text-indigo-600 mt-0.5'>1.</span>
-                <p>
-                  <strong>Блокировка:</strong> операторы не могут занимать одну
-                  клетку. Если оператор пытается встать на занятую клетку, ход
-                  не выполняется.
-                </p>
-              </div>
-              <div className='flex items-start gap-2'>
-                <span className='text-indigo-600 mt-0.5'>2.</span>
-                <p>
-                  <strong>Общие ключи:</strong> любой ключ может быть подобран
-                  любым игроком. На карте может быть один или два ключа, а
-                  оператору для выхода достаточно подобрать хотя бы один.
-                </p>
-              </div>
-              <div className='flex items-start gap-2'>
-                <span className='text-indigo-600 mt-0.5'>3.</span>
-                <p>
-                  <strong>Параллельное выполнение:</strong> оба алгоритма
-                  выполняются независимо, после чего арена воспроизводит их
-                  покадрово. В дуэли можно дополнительно считывать позицию
-                  соперника.
-                </p>
-              </div>
-              <div className='flex items-start gap-2'>
-                <span className='text-indigo-600 mt-0.5'>4.</span>
-                <p>
-                  <strong>Кастомные карты:</strong> конструктор пропускает
-                  только карты с 2 спавнами, 1 выходом, 1–2 ключами, рамкой из
-                  стен и полной достижимостью целей от обоих игроков.
-                </p>
-              </div>
-            </div>
-          </Section>
-
-          <Section
-            id='constraints'
-            title='Ограничения'
-            icon={AlertTriangle}
-          >
-            <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3'>
-              <div className='bg-slate-50 border border-slate-200 rounded-lg p-3'>
-                <h4 className='text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1'>
-                  Макс. шагов
-                </h4>
-                <p className='text-lg font-mono text-slate-950'>1 000</p>
-                <p className='text-xs text-slate-500 mt-1'>
-                  На одно выполнение скрипта
-                </p>
-              </div>
-              <div className='bg-slate-50 border border-slate-200 rounded-lg p-3'>
-                <h4 className='text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1'>
-                  Размер карты
-                </h4>
-                <p className='text-lg font-mono text-slate-950'>
-                  {MAP_SIZE_LIMITS.minWidth}–{MAP_SIZE_LIMITS.maxWidth} ×{' '}
-                  {MAP_SIZE_LIMITS.minHeight}–{MAP_SIZE_LIMITS.maxHeight}
-                </p>
-                <p className='text-xs text-slate-500 mt-1'>
-                  Для генератора и конструктора карт
-                </p>
-              </div>
-              <div className='bg-slate-50 border border-slate-200 rounded-lg p-3'>
-                <h4 className='text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1'>
-                  Язык
-                </h4>
-                <p className='text-lg font-mono text-slate-950'>JavaScript</p>
-                <p className='text-xs text-slate-500 mt-1'>
-                  Стандартный JS, без внешних библиотек
-                </p>
-              </div>
-              <div className='bg-slate-50 border border-slate-200 rounded-lg p-3'>
-                <h4 className='text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1'>
-                  API соперника
-                </h4>
-                <p className='text-lg font-mono text-slate-950'>Только Duel</p>
-                <p className='text-xs text-slate-500 mt-1'>
-                  `getOpponentPosition()` доступен лишь в режиме дуэли
-                </p>
-              </div>
-              <div className='bg-slate-50 border border-slate-200 rounded-lg p-3'>
-                <h4 className='text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1'>
-                  Запрещено
-                </h4>
-                <p className='text-lg font-mono text-slate-950'>DOM / Сеть</p>
-                <p className='text-xs text-slate-500 mt-1'>
-                  Нет доступа к API браузера
-                </p>
-              </div>
-              <div className='bg-slate-50 border border-slate-200 rounded-lg p-3'>
-                <h4 className='text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1'>
-                  Редактор карт
-                </h4>
-                <p className='text-lg font-mono text-slate-950'>/map-editor</p>
-                <p className='text-xs text-slate-500 mt-1'>
-                  Кастомная карта применяется прямо в текущую игру
-                </p>
-              </div>
-            </div>
-          </Section>
-        </div>
-      </div>
-    </>
+          <p className="mt-4 max-w-4xl text-2xl font-semibold leading-tight text-slate-950">
+            Нормальная стратегия не должна жить на одной удобной карте. Проверяй
+            её на фиксированной схеме, на случайной генерации и на своём
+            собранном сценарии, а потом уже отправляй на модерацию.
+          </p>
+        </article>
+      </section>
+    </div>
   );
 }

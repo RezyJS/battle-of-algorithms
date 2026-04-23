@@ -18,6 +18,10 @@ export function getKeycloakRealmUrl(): string {
   return requireEnv('KEYCLOAK_ISSUER');
 }
 
+export function getKeycloakInternalRealmUrl(): string {
+  return process.env.KEYCLOAK_INTERNAL_ISSUER ?? getKeycloakRealmUrl();
+}
+
 export function getKeycloakClientId(): string {
   return requireEnv('KEYCLOAK_CLIENT_ID');
 }

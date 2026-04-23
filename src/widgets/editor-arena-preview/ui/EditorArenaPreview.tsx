@@ -1,17 +1,34 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Play, Pause, RotateCcw, Swords } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 import { useGameStore, SPEED_OPTIONS } from '@/src/app/model/game-store';
-import { algorithmTemplates, type AlgorithmTemplateName } from '@/src/features/script-editor';
-import { buildStaticArenaMapConfig } from '@/src/shared/lib/arena-config';
+import {
+  algorithmTemplates,
+  type AlgorithmTemplateName,
+} from '@/src/features/script-editor';
+import {
+  buildCustomArenaMapConfig,
+  buildRandomArenaMapConfig,
+  buildStaticArenaMapConfig,
+  type ArenaMapConfig,
+} from '@/src/shared/lib/arena-config';
+import { ExpandableCard } from '@/src/shared/ui/ExpandableCard';
 import { ArenaLegend } from '@/src/widgets/arena-legend';
+import { ControlPanel } from '@/src/widgets/control-panel';
 import { EventLog } from '@/src/widgets/event-log';
 import { GameBoard } from '@/src/widgets/game-board';
 import { cn } from '@/src/shared/lib/utils';
 
-function playerStatus(hasHistory: boolean, hasKey: boolean, hasExited: boolean) {
+const CUSTOM_MAP_DRAFT_KEY = 'boa-editor-custom-map-draft';
+
+function playerStatus(
+  hasHistory: boolean,
+  hasKey: boolean,
+  hasExited: boolean,
+) {
   if (!hasHistory) return 'Ожидание запуска';
   if (hasExited) return 'Выбрался';
   if (hasKey) return 'Ключ найден';
@@ -32,15 +49,70 @@ export function EditorArenaPreview() {
     applyArenaConfig,
     togglePlayback,
     reset,
+    setStep,
     stepForward,
+    stepBackward,
     setSpeedIndex,
+    mapWidth,
+    mapHeight,
+    gameMode,
   } = useGameStore();
   const [opponentTemplate, setOpponentTemplate] =
-    useState<AlgorithmTemplateName>('wallFollower');
+    useState<AlgorithmTemplateName>('scanner');
+  const [mapType, setMapType] = useState<'static' | 'random' | 'custom'>(
+    'static',
+  );
+  const [randomWidth, setRandomWidth] = useState(10);
+  const [randomHeight, setRandomHeight] = useState(8);
+  const [customMapDraft] = useState<ArenaMapConfig | null>(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    const rawDraft = window.localStorage.getItem(CUSTOM_MAP_DRAFT_KEY);
+
+    if (!rawDraft) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(rawDraft) as ArenaMapConfig;
+    } catch {
+      window.localStorage.removeItem(CUSTOM_MAP_DRAFT_KEY);
+      return null;
+    }
+  });
+  const [randomVersion, setRandomVersion] = useState(0);
 
   useEffect(() => {
+    if (mapType === 'custom' && customMapDraft) {
+      applyArenaConfig(
+        buildCustomArenaMapConfig({
+          grid: customMapDraft.grid,
+          spawn1: customMapDraft.spawn1,
+          spawn2: customMapDraft.spawn2,
+          gameMode: 'race',
+        }),
+      );
+      return;
+    }
+
+    if (mapType === 'random') {
+      applyArenaConfig(
+        buildRandomArenaMapConfig(randomWidth, randomHeight, 'race'),
+      );
+      return;
+    }
+
     applyArenaConfig(buildStaticArenaMapConfig());
-  }, [applyArenaConfig]);
+  }, [
+    applyArenaConfig,
+    customMapDraft,
+    mapType,
+    randomHeight,
+    randomVersion,
+    randomWidth,
+  ]);
 
   useEffect(() => {
     setScript(1, algorithmTemplates[opponentTemplate].code);
@@ -58,59 +130,170 @@ export function EditorArenaPreview() {
     return () => clearInterval(timer);
   }, [histories, isRunning, speedIndex, stepForward]);
 
-  const maxSteps =
-    histories.length > 0 ?
-      Math.max(...histories.map((history) => history.length - 1))
-    : 0;
-  const progress = maxSteps > 0 ? (currentStep / maxSteps) * 100 : 0;
   const leftState = histories[0]?.[currentStep];
   const rightState = histories[1]?.[currentStep];
 
   return (
-    <section className="mt-6 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
-      <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-indigo-600">
-            <Swords className="h-3.5 w-3.5" />
-            Тестовая арена
-          </div>
-          <h2 className="mt-2 text-lg font-semibold text-slate-950">
-            Проверьте алгоритм до отправки
-          </h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Текущий код запускается против тестового соперника на статической карте.
-          </p>
+    <ExpandableCard
+      title='Тестовая арена'
+      subtitle='Попробуйте как ваш код поведёт себя на соревновании.'
+      actions={
+        <div className='flex gap-3'>
+          <label className='flex flex-col gap-1 text-sm text-slate-600'>
+            <span className='text-xs'>Карта для теста</span>
+            <select
+              className='rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-indigo-500'
+              value={mapType}
+              onChange={(event) =>
+                setMapType(event.target.value as 'static' | 'random' | 'custom')
+              }
+              disabled={isRunning}
+            >
+              <option value='static'>Фиксированная</option>
+              <option value='random'>Случайная</option>
+              <option value='custom'>Из конструктора</option>
+            </select>
+          </label>
+          <label className='flex flex-col gap-1 text-sm text-slate-600'>
+            <span className='text-xs'>Тестовый соперник</span>
+            <select
+              className='rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-indigo-500'
+              value={opponentTemplate}
+              onChange={(e) =>
+                setOpponentTemplate(e.target.value as AlgorithmTemplateName)
+              }
+              disabled={isRunning}
+            >
+              {Object.entries(algorithmTemplates).map(([key, template]) => (
+                <option
+                  key={key}
+                  value={key}
+                >
+                  {template.name}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
+      }
+      className='mt-6'
+      contentClassName='space-y-4'
+      defaultOpen
+    >
+      <div>
+        <div className='flex gap-3 lg:items-start'>
+          {mapType === 'random' && (
+            <div className='flex w-full gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 justify-between'>
+              <div className='flex gap-3'>
+                <label className='flex flex-col gap-1 text-sm text-slate-600'>
+                  <span>Ширина</span>
+                  <input
+                    type='number'
+                    min={6}
+                    max={20}
+                    value={randomWidth}
+                    disabled={isRunning}
+                    onChange={(event) =>
+                      setRandomWidth(Number(event.target.value) || 10)
+                    }
+                    className='rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-indigo-500'
+                  />
+                </label>
+                <label className='flex flex-col gap-1 text-sm text-slate-600'>
+                  <span>Высота</span>
+                  <input
+                    type='number'
+                    min={4}
+                    max={14}
+                    value={randomHeight}
+                    disabled={isRunning}
+                    onChange={(event) =>
+                      setRandomHeight(Number(event.target.value) || 8)
+                    }
+                    className='rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-indigo-500'
+                  />
+                </label>
+              </div>
+              <div className='flex items-center'>
+                <button
+                  type='button'
+                  disabled={isRunning}
+                  onClick={() => setRandomVersion((value) => value + 1)}
+                  className='inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50'
+                >
+                  <RefreshCw className='h-4 w-4' />
+                  Сгенерировать снова
+                </button>
+              </div>
+            </div>
+          )}
 
-        <label className="flex flex-col gap-1 text-sm text-slate-600">
-          <span>Тестовый соперник</span>
-          <select
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
-            value={opponentTemplate}
-            onChange={(e) =>
-              setOpponentTemplate(e.target.value as AlgorithmTemplateName)
-            }
-            disabled={isRunning}
-          >
-            {Object.entries(algorithmTemplates).map(([key, template]) => (
-              <option key={key} value={key}>
-                {template.name}
-              </option>
-            ))}
-          </select>
-        </label>
+          {mapType === 'custom' && (
+            <div className='flex w-full flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600'>
+              <div className='flex items-center justify-between gap-3'>
+                <p>
+                  {customMapDraft ?
+                    `Черновик: ${customMapDraft.width}×${customMapDraft.height}`
+                  : 'Черновик карты не сохранён'}
+                </p>
+                <Link
+                  href='/editor/map'
+                  className='rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-100'
+                >
+                  Открыть конструктор
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-4">
-          <div className="flex justify-center">
+      <div className='mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]'>
+        <div className='space-y-4'>
+          <div className='flex justify-center'>
             <GameBoard field={field} />
           </div>
+        </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                ⚙️ Ваш алгоритм
+        <div className='space-y-4'>
+          <ControlPanel
+            canManageArena={false}
+            isRunning={isRunning}
+            currentStep={currentStep}
+            histories={histories}
+            mapType={mapType}
+            speedIndex={speedIndex}
+            result={result}
+            mapWidth={mapWidth}
+            mapHeight={mapHeight}
+            gameMode={gameMode}
+            activeBattle={null}
+            leftPlayerName='Ваш алгоритм'
+            rightPlayerName={algorithmTemplates[opponentTemplate].name}
+            startLabel='Запустить тест'
+            pauseLabel='Пауза'
+            showResetButton
+            onToggle={togglePlayback}
+            onReset={reset}
+            onStepBackward={stepBackward}
+            onStepForward={stepForward}
+            onSetStep={setStep}
+            onSpeedChange={setSpeedIndex}
+          />
+
+          {scriptError && (
+            <div className='rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700'>
+              {scriptError}
+            </div>
+          )}
+
+          <EventLog messages={messages} />
+          <ArenaLegend />
+
+          <div className='grid gap-3 sm:grid-cols-2'>
+            <div className='rounded-xl border border-slate-200 bg-slate-50 p-3'>
+              <div className='text-xs uppercase tracking-[0.18em] text-slate-500'>
+                ⚙️ Вы
               </div>
               <div
                 className={cn(
@@ -120,16 +303,20 @@ export function EditorArenaPreview() {
                   : 'text-slate-700',
                 )}
               >
-                {playerStatus(Boolean(leftState), Boolean(leftState?.hasKey), Boolean(leftState?.hasExited))}
+                {playerStatus(
+                  Boolean(leftState),
+                  Boolean(leftState?.hasKey),
+                  Boolean(leftState?.hasExited),
+                )}
               </div>
-              <div className="mt-1 text-xs text-slate-500">
+              <div className='mt-1 text-xs text-slate-500'>
                 Шагов: {leftState ? currentStep : 0}
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                🟢 {algorithmTemplates[opponentTemplate].name}
+            <div className='rounded-xl border border-slate-200 bg-slate-50 p-3'>
+              <div className='text-xs uppercase tracking-[0.18em] text-slate-500'>
+                🟢 Соперник
               </div>
               <div
                 className={cn(
@@ -139,116 +326,19 @@ export function EditorArenaPreview() {
                   : 'text-slate-700',
                 )}
               >
-                {playerStatus(Boolean(rightState), Boolean(rightState?.hasKey), Boolean(rightState?.hasExited))}
+                {playerStatus(
+                  Boolean(rightState),
+                  Boolean(rightState?.hasKey),
+                  Boolean(rightState?.hasExited),
+                )}
               </div>
-              <div className="mt-1 text-xs text-slate-500">
+              <div className='mt-1 text-xs text-slate-500'>
                 Шагов: {rightState ? currentStep : 0}
               </div>
             </div>
           </div>
         </div>
-
-        <div className="space-y-4">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className={cn(
-                  'flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-colors',
-                  isRunning ? 'bg-rose-600 hover:bg-rose-500' : 'bg-indigo-600 hover:bg-indigo-500',
-                )}
-                onClick={togglePlayback}
-              >
-                <span className="flex items-center justify-center gap-2">
-                  {isRunning ?
-                    <>
-                      <Pause className="h-4 w-4" /> Пауза
-                    </>
-                  : <>
-                      <Play className="h-4 w-4" /> Запустить тест
-                    </>
-                  }
-                </span>
-              </button>
-
-              <button
-                type="button"
-                className="rounded-lg bg-white px-3 py-2.5 text-slate-800 transition-colors hover:bg-slate-100 border border-slate-200"
-                onClick={reset}
-                title="Сбросить"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-2">
-              <div className="flex justify-between text-xs text-slate-500">
-                <span>Шаг {currentStep}</span>
-                <span>из {maxSteps}</span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
-                <div
-                  className="h-full rounded-full bg-indigo-500 transition-all duration-200"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-1.5">
-              <div className="text-xs text-slate-500">Скорость</div>
-              <div className="flex gap-1">
-                {SPEED_OPTIONS.map((option, index) => (
-                  <button
-                    key={option.label}
-                    type="button"
-                    onClick={() => setSpeedIndex(index)}
-                    className={cn(
-                      'flex-1 rounded py-1 text-xs font-medium transition-colors',
-                      index === speedIndex ?
-                        'bg-indigo-600 text-white'
-                      : 'bg-white text-slate-600 hover:bg-slate-100',
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {result && (
-            <div
-              className={cn(
-                'rounded-xl border p-4 text-sm',
-                result.winner !== null ?
-                  result.winner === 0 ?
-                    'border-emerald-200 bg-emerald-50 text-emerald-900'
-                  : 'border-amber-200 bg-amber-50 text-amber-900'
-                : 'border-slate-200 bg-slate-50 text-slate-800',
-              )}
-            >
-              <div className="font-semibold">
-                {result.winner === 0 ? 'Ваш алгоритм победил'
-                : result.winner === 1 ? 'Тестовый соперник победил'
-                : 'Ничья'}
-              </div>
-              <p className="mt-1 text-xs opacity-80">{result.reason}</p>
-              <p className="mt-2 text-xs opacity-80">
-                Счёт: ⚙️ {result.scores[0]} · 🟢 {result.scores[1]}
-              </p>
-            </div>
-          )}
-
-          {scriptError && (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-              {scriptError}
-            </div>
-          )}
-
-          <EventLog messages={messages} />
-          <ArenaLegend />
-        </div>
       </div>
-    </section>
+    </ExpandableCard>
   );
 }

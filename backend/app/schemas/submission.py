@@ -27,6 +27,13 @@ class SubmissionListItem(BaseModel):
     updated_at: datetime
 
 
+class ModerationSubmissionPage(BaseModel):
+    items: list[SubmissionListItem]
+    total: int
+    page: int
+    page_size: int
+
+
 class UpdateSubmissionStatusRequest(BaseModel):
     status: SubmissionStatus
     moderator_user_id: int

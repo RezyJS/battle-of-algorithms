@@ -58,7 +58,7 @@ export default function ActiveBattlePage(props: TActiveBattlePageProps) {
   return (
     <>
       <div className='grid w-full gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start'>
-        <div className='flex min-w-0 flex-col items-center gap-6'>
+        <div className='flex min-w-0 flex-col gap-6 overflow-hidden'>
           <div className='flex w-full max-w-5xl flex-col gap-3 rounded-2xl border border-slate-200 bg-white/80 px-6 py-5 shadow-sm'>
             <div className='shrink-0'>
               <p className='text-xs text-center uppercase tracking-[0.25em] text-indigo-600'>
@@ -103,7 +103,7 @@ export default function ActiveBattlePage(props: TActiveBattlePageProps) {
             </div>
           </div>
 
-          <div className='flex w-full justify-center'>
+          <div className='w-full overflow-hidden'>
             <GameBoard field={field} />
           </div>
         </div>

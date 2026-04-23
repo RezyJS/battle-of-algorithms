@@ -1,7 +1,6 @@
 import { AuthRequiredCard } from '@/src/features/auth/ui/AuthRequiredCard';
 import { ForbiddenCard } from '@/src/features/auth/ui/ForbiddenCard';
-import { ArenaBattleAssignmentForm } from '@/src/features/moderation/ui/ArenaBattleAssignmentForm';
-import { ArenaConfigForm } from '@/src/features/moderation/ui/ArenaConfigForm';
+import { ArenaSetupForm } from '@/src/features/moderation/ui/ArenaSetupForm';
 import { ModerationNav } from '@/src/features/moderation/ui/ModerationNav';
 import { normalizeArenaMapConfig } from '@/src/shared/lib/arena-config';
 import {
@@ -69,7 +68,11 @@ export default async function ModerationArenaPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <ArenaBattleAssignmentForm users={users} activeBattle={activeBattle} />
+        <ArenaSetupForm
+          users={users}
+          activeBattle={activeBattle}
+          activeConfig={activeConfig}
+        />
 
         <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-950">Сейчас на арене</h2>
@@ -108,10 +111,7 @@ export default async function ModerationArenaPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <ArenaConfigForm activeBattle={activeBattle} activeConfig={activeConfig} />
-
-        <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-950">Текущая конфигурация</h2>
           {activeConfig ? (
             <div className="mt-4 space-y-3">
@@ -139,7 +139,6 @@ export default async function ModerationArenaPage() {
               Конфигурация появится после выбора активного боя.
             </div>
           )}
-        </div>
       </div>
     </div>
   );

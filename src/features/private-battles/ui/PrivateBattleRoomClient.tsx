@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   ChevronDown,
   CircleCheckBig,
-  CircleX,
   CurlyBraces,
   Map,
   RefreshCw,
@@ -40,7 +39,6 @@ import {
   loadPersistedPlaybackState,
   savePersistedPlaybackState,
 } from '@/src/shared/lib/battle-playback-persist';
-import { usePollingRefresh } from '@/src/shared/lib/usePollingRefresh';
 import {
   buildStaticArenaMapConfig,
   normalizeArenaMapConfig,
@@ -186,12 +184,55 @@ export function PrivateBattleRoomClient({
     [battle.can_view_battle, battle.id, battle.map_revision, battle.updated_at],
   );
 
-  usePollingRefresh(3000, !hasUnsavedCodeChanges && !isMutating);
-
   useEffect(() => {
     setBattle(initialBattle);
     setCode(initialBattle.current_user_code);
   }, [initialBattle]);
+
+  useEffect(() => {
+    if (hasUnsavedCodeChanges || isMutating) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const refreshBattle = async () => {
+      if (document.visibilityState !== 'visible') {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/private-battles/${battle.id}`, {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const nextBattle = (await response.json()) as PrivateBattle;
+
+        setBattle((previousBattle) => {
+          if (code === previousBattle.current_user_code) {
+            setCode(nextBattle.current_user_code);
+          }
+
+          return nextBattle;
+        });
+      } catch {
+        // noop
+      }
+    };
+
+    refreshBattle();
+    const intervalId = window.setInterval(refreshBattle, 2000);
+
+    return () => {
+      controller.abort();
+      window.clearInterval(intervalId);
+    };
+  }, [battle.id, code, hasUnsavedCodeChanges, isMutating]);
 
   useEffect(() => {
     if (

@@ -5,6 +5,7 @@ import {
   getAuthCallbackUrl,
   getKeycloakClientId,
   getKeycloakClientSecret,
+  getKeycloakInternalRealmUrl,
   getKeycloakLogoutUrl,
   getPostLogoutRedirectUrl,
   getKeycloakRealmUrl,
@@ -28,9 +29,9 @@ type KeycloakClaims = {
   };
 };
 
-function createKeycloakClient(): KeyCloak {
+function createKeycloakClient(realmUrl = getKeycloakRealmUrl()): KeyCloak {
   return new KeyCloak(
-    getKeycloakRealmUrl(),
+    realmUrl,
     getKeycloakClientId(),
     getKeycloakClientSecret(),
     getAuthCallbackUrl(),
@@ -79,7 +80,6 @@ export function buildAuthorizationRequest(returnTo: string | null) {
   const url = keycloak.createAuthorizationURL(state, codeVerifier, [
     'openid',
     'profile',
-    'email',
   ]);
 
   return {
@@ -144,7 +144,7 @@ export async function exchangeCodeForUser(
   code: string,
   codeVerifier: string,
 ): Promise<{ user: SessionUser; idToken: string }> {
-  const keycloak = createKeycloakClient();
+  const keycloak = createKeycloakClient(getKeycloakInternalRealmUrl());
   const tokens = await keycloak.validateAuthorizationCode(code, codeVerifier);
   const idTokenClaims = decodeIdToken(tokens.idToken()) as KeycloakClaims;
   const accessTokenClaims = decodeIdToken(tokens.accessToken()) as KeycloakClaims;

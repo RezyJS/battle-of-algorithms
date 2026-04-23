@@ -22,6 +22,13 @@ export type ModerationSubmission = {
   updated_at: string;
 };
 
+export type ModerationSubmissionPage = {
+  items: ModerationSubmission[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
 export type UserSubmission = {
   id: number;
   user_id: number;
@@ -178,6 +185,36 @@ export async function getModerationSubmissions(): Promise<ModerationSubmission[]
   return safeInternalJson<ModerationSubmission[]>(
     '/api/internal/moderation/submissions',
     [],
+  );
+}
+
+export async function getModerationSubmissionsPage(options?: {
+  status?: string;
+  query?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<ModerationSubmissionPage> {
+  const searchParams = new URLSearchParams();
+
+  if (options?.status) {
+    searchParams.set('status', options.status);
+  }
+
+  if (options?.query) {
+    searchParams.set('query', options.query);
+  }
+
+  searchParams.set('page', String(options?.page ?? 1));
+  searchParams.set('page_size', String(options?.pageSize ?? 12));
+
+  return safeInternalJson<ModerationSubmissionPage>(
+    `/api/internal/moderation/submissions/page?${searchParams.toString()}`,
+    {
+      items: [],
+      total: 0,
+      page: options?.page ?? 1,
+      page_size: options?.pageSize ?? 12,
+    },
   );
 }
 

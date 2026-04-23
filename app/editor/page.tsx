@@ -19,11 +19,5 @@ export default async function EditorPage() {
   }
 
   const submission = await getOwnSubmission();
-
-  return (
-    <EditorPageClient
-      currentUserName={user.name ?? user.username}
-      initialSubmission={submission}
-    />
-  );
+  return <EditorPageClient initialSubmission={submission} />;
 }

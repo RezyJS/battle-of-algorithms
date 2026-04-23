@@ -8,6 +8,30 @@ interface GeneratedMap {
   spawn2: GridPoint;
 }
 
+function createSeededRandom(seed?: string | number): () => number {
+  if (seed === undefined || seed === null || seed === '') {
+    return Math.random;
+  }
+
+  const normalizedSeed = String(seed);
+  let hash = 2166136261;
+
+  for (let index = 0; index < normalizedSeed.length; index++) {
+    hash ^= normalizedSeed.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  let state = hash >>> 0;
+
+  return () => {
+    state += 0x6d2b79f5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /**
  * Generates a solvable maze using recursive backtracking (DFS).
  * Guarantees that both spawn points, both keys, and the exit are reachable.
@@ -15,7 +39,10 @@ interface GeneratedMap {
 export function generateMap(
   width: number = 10,
   height: number = 8,
+  seed?: string | number,
 ): GeneratedMap {
+  const random = createSeededRandom(seed);
+
   // Ensure odd dimensions so DFS covers all edges evenly
   if (width % 2 === 0) width--;
   if (height % 2 === 0) height--;
@@ -40,7 +67,7 @@ export function generateMap(
   function shuffle<T>(arr: T[]): T[] {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(random() * (i + 1));
       [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
@@ -73,7 +100,7 @@ export function generateMap(
   // Open up extra passages to make the maze less tight (30% of walls)
   for (let y = 1; y < height - 1; y++) {
     for (let x = 1; x < width - 1; x++) {
-      if (grid[y][x] === FieldContent.WALL && Math.random() < 0.3) {
+      if (grid[y][x] === FieldContent.WALL && random() < 0.3) {
         // Only remove if it doesn't create a 3x3 empty block
         const neighbors = [
           grid[y - 1]?.[x],
@@ -101,7 +128,7 @@ export function generateMap(
 
   // Place spawn points, keys, and exit with reachability guarantee
   function pickRandom(cells: GridPoint[]) {
-    return cells[Math.floor(Math.random() * cells.length)];
+    return cells[Math.floor(random() * cells.length)];
   }
 
   function distance(a: GridPoint, b: GridPoint) {

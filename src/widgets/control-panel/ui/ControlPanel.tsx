@@ -30,6 +30,11 @@ interface ControlPanelProps {
   mapHeight: number;
   gameMode: GameMode;
   activeBattle: ActiveBattle | null;
+  leftPlayerName?: string | null;
+  rightPlayerName?: string | null;
+  startLabel?: string;
+  pauseLabel?: string;
+  showResetButton?: boolean;
   onToggle: () => void;
   onReset: () => void;
   onStepBackward: () => void;
@@ -46,6 +51,11 @@ export function ControlPanel({
   speedIndex,
   result,
   activeBattle,
+  leftPlayerName,
+  rightPlayerName,
+  startLabel,
+  pauseLabel,
+  showResetButton,
   onToggle,
   onReset,
   onStepBackward,
@@ -61,35 +71,40 @@ export function ControlPanel({
 
   const winnerLabel =
     result?.winner === 0 ?
-      `Победил: 🔴 ${activeBattle?.left_player_name ?? 'Участник 1'}`
+      `Победил: 🔴 ${leftPlayerName ?? activeBattle?.left_player_name ?? 'Участник 1'}`
     : result?.winner === 1 ?
-      `Победил: 🟢 ${activeBattle?.right_player_name ?? 'Участник 2'}`
+      `Победил: 🟢 ${rightPlayerName ?? activeBattle?.right_player_name ?? 'Участник 2'}`
     : 'Ничья';
+
+  const primaryActionLabel = isRunning ?
+      (pauseLabel ?? (canManageArena ? 'Пауза' : 'Пауза просмотра'))
+    : (startLabel ?? (canManageArena ? 'Старт' : 'Начать просмотр'));
+  const shouldShowResetButton = showResetButton ?? canManageArena;
 
   return (
     <>
       <div className='w-full space-y-3 rounded-xl border border-slate-200 bg-white/80 p-3 shadow-sm'>
-        {canManageArena ?
-          <div className='flex gap-2'>
-            <button
-              className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                isRunning ?
-                  'bg-red-600 text-white hover:bg-red-700'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700'
-              }`}
-              onClick={onToggle}
-            >
-              <span className='flex items-center justify-center gap-2'>
-                {isRunning ?
-                  <>
-                    <Pause className='h-4 w-4' /> Пауза
-                  </>
-                : <>
-                    <Play className='h-4 w-4' /> Старт
-                  </>
-                }
-              </span>
-            </button>
+        <div className={shouldShowResetButton ? 'flex gap-2' : 'space-y-2'}>
+          <button
+            className={`${shouldShowResetButton ? 'flex-1' : 'w-full'} rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+              isRunning ?
+                'bg-red-600 text-white hover:bg-red-700'
+              : 'bg-indigo-600 text-white hover:bg-indigo-700'
+            }`}
+            onClick={onToggle}
+          >
+            <span className='flex items-center justify-center gap-2'>
+              {isRunning ?
+                <>
+                  <Pause className='h-4 w-4' /> {primaryActionLabel}
+                </>
+              : <>
+                  <Play className='h-4 w-4' /> {primaryActionLabel}
+                </>
+              }
+            </span>
+          </button>
+          {shouldShowResetButton && (
             <button
               className='rounded-lg bg-slate-100 px-3 py-2 text-slate-900 transition-colors hover:bg-slate-200'
               onClick={onReset}
@@ -97,29 +112,8 @@ export function ControlPanel({
             >
               <RotateCcw className='h-4 w-4' />
             </button>
-          </div>
-        : <div className='space-y-2'>
-            <button
-              className={`w-full rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                isRunning ?
-                  'bg-red-600 text-white hover:bg-red-700'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700'
-              }`}
-              onClick={onToggle}
-            >
-              <span className='flex items-center justify-center gap-2'>
-                {isRunning ?
-                  <>
-                    <Pause className='h-4 w-4' /> Пауза просмотра
-                  </>
-                : <>
-                    <Play className='h-4 w-4' /> Начать просмотр
-                  </>
-                }
-              </span>
-            </button>
-          </div>
-        }
+          )}
+        </div>
 
         <div className='space-y-1'>
           <div className='text-xs text-slate-500'>Скорость</div>
