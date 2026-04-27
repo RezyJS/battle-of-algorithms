@@ -12,14 +12,17 @@ from app.models.audit_log import AuditLog
 from app.models.battle import Battle
 from app.models.code_submission import CodeSubmission
 from app.models.enums import BattleStatus, SubmissionStatus
+from app.models.private_battle_invite import PrivateBattleInvite
 from app.models.user import User
 from app.schemas.battle import (
     ActiveBattleResponse,
     ArenaUserOption,
-    CreatePrivateBattleRequest,
+    CreatePrivateBattleInviteRequest,
     PrivateBattleActorRequest,
+    PrivateBattleInviteItem,
     PrivateBattleListItem,
     PrivateBattleResponse,
+    PrivateBattleResultItem,
     PrivateBattleUserOption,
     SavePrivateBattleResultRequest,
     SetActiveBattleRequest,
@@ -29,6 +32,9 @@ from app.schemas.battle import (
 
 ARENA_BATTLE_TYPE = "arena"
 PRIVATE_BATTLE_TYPE = "private"
+PRIVATE_BATTLE_INVITE_PENDING = "pending"
+PRIVATE_BATTLE_INVITE_ACCEPTED = "accepted"
+PRIVATE_BATTLE_INVITE_DECLINED = "declined"
 PRIVATE_BATTLE_WIDTH_OPTIONS = (9, 11, 13)
 PRIVATE_BATTLE_HEIGHT_OPTIONS = (7, 9, 11)
 
@@ -213,6 +219,8 @@ def _private_battle_response(
         right_code_confirmed=battle.right_code_confirmed,
         left_map_change_requested=battle.left_map_change_requested,
         right_map_change_requested=battle.right_map_change_requested,
+        left_map_confirmed=battle.left_map_confirmed,
+        right_map_confirmed=battle.right_map_confirmed,
         map_revision=battle.map_revision,
         current_user_slot=current_user_slot,
         current_user_code=current_user_code,
@@ -237,6 +245,100 @@ def _private_battle_response(
         finished_at=battle.finished_at,
         updated_at=battle.updated_at,
     )
+
+
+def _private_battle_invite_item(
+    invite: PrivateBattleInvite,
+    current_user_id: int,
+    inviter: User | None,
+    opponent: User | None,
+) -> PrivateBattleInviteItem:
+    return PrivateBattleInviteItem(
+        id=invite.id,
+        status=invite.status,
+        inviter_user_id=invite.inviter_user_id,
+        opponent_user_id=invite.opponent_user_id,
+        inviter_name=_display_name(inviter),
+        inviter_username=inviter.username if inviter else None,
+        opponent_name=_display_name(opponent),
+        opponent_username=opponent.username if opponent else None,
+        battle_id=invite.battle_id,
+        current_user_role=(
+            "inviter" if invite.inviter_user_id == current_user_id else "opponent"
+        ),
+        created_at=invite.created_at,
+        updated_at=invite.updated_at,
+    )
+
+
+def _ensure_no_pending_private_invite(
+    db: Session,
+    left_user_id: int,
+    right_user_id: int,
+) -> None:
+    existing_invite = db.scalar(
+        select(PrivateBattleInvite).where(
+            PrivateBattleInvite.status == PRIVATE_BATTLE_INVITE_PENDING,
+            or_(
+                and_(
+                    PrivateBattleInvite.inviter_user_id == left_user_id,
+                    PrivateBattleInvite.opponent_user_id == right_user_id,
+                ),
+                and_(
+                    PrivateBattleInvite.inviter_user_id == right_user_id,
+                    PrivateBattleInvite.opponent_user_id == left_user_id,
+                ),
+            ),
+        )
+    )
+
+    if existing_invite is not None:
+        raise ValueError("Pending private battle invite already exists for these players")
+
+
+def _ensure_no_open_private_battle(
+    db: Session,
+    left_user_id: int,
+    right_user_id: int,
+) -> None:
+    existing_battle = db.scalar(
+        select(Battle).where(
+            Battle.battle_type == PRIVATE_BATTLE_TYPE,
+            Battle.result_reason.is_(None),
+            or_(
+                and_(
+                    Battle.left_player_id == left_user_id,
+                    Battle.right_player_id == right_user_id,
+                ),
+                and_(
+                    Battle.left_player_id == right_user_id,
+                    Battle.right_player_id == left_user_id,
+                ),
+            ),
+        )
+    )
+
+    if existing_battle is not None:
+        raise ValueError("Open private battle already exists for these players")
+
+
+def _create_private_battle_from_users(
+    db: Session,
+    inviter: User,
+    opponent: User,
+) -> Battle:
+    battle = Battle(
+        title=f"{_display_name(inviter)} vs {_display_name(opponent)}",
+        battle_type=PRIVATE_BATTLE_TYPE,
+        status=BattleStatus.DRAFT,
+        left_player_id=inviter.id,
+        right_player_id=opponent.id,
+        map_config=_generate_private_battle_map_config(),
+        created_by=inviter.id,
+    )
+    db.add(battle)
+    db.flush()
+    return battle
 
 
 def list_arena_users(db: Session) -> list[ArenaUserOption]:
@@ -484,7 +586,6 @@ def list_private_battles_for_user(
         .outerjoin(right_player, Battle.right_player_id == right_player.id)
         .where(
             Battle.battle_type == PRIVATE_BATTLE_TYPE,
-            Battle.status != BattleStatus.FINISHED,
             or_(Battle.left_player_id == user_id, Battle.right_player_id == user_id),
         )
         .order_by(Battle.updated_at.desc(), Battle.id.desc())
@@ -509,6 +610,8 @@ def list_private_battles_for_user(
                 right_code_confirmed=battle.right_code_confirmed,
                 left_map_change_requested=battle.left_map_change_requested,
                 right_map_change_requested=battle.right_map_change_requested,
+                left_map_confirmed=battle.left_map_confirmed,
+                right_map_confirmed=battle.right_map_confirmed,
                 map_revision=battle.map_revision,
                 has_result=battle.result_reason is not None,
                 winner_player_id=battle.winner_player_id,
@@ -530,6 +633,125 @@ def list_private_battles_for_user(
         )
 
     return items
+
+
+def list_private_battle_invites_for_user(
+    db: Session,
+    user_id: int,
+) -> list[PrivateBattleInviteItem]:
+    inviter = aliased(User)
+    opponent = aliased(User)
+
+    rows = db.execute(
+        select(PrivateBattleInvite, inviter, opponent)
+        .outerjoin(inviter, PrivateBattleInvite.inviter_user_id == inviter.id)
+        .outerjoin(opponent, PrivateBattleInvite.opponent_user_id == opponent.id)
+        .where(
+            PrivateBattleInvite.status == PRIVATE_BATTLE_INVITE_PENDING,
+            or_(
+                PrivateBattleInvite.inviter_user_id == user_id,
+                PrivateBattleInvite.opponent_user_id == user_id,
+            ),
+        )
+        .order_by(PrivateBattleInvite.updated_at.desc(), PrivateBattleInvite.id.desc())
+    ).all()
+
+    return [
+        _private_battle_invite_item(invite, user_id, inviter_user, opponent_user)
+        for invite, inviter_user, opponent_user in rows
+    ]
+
+
+def list_private_battle_results(
+    db: Session,
+    limit: int = 10,
+) -> list[PrivateBattleResultItem]:
+    left_player = aliased(User)
+    right_player = aliased(User)
+    normalized_limit = max(1, min(limit, 50))
+
+    rows = db.execute(
+        select(Battle, left_player, right_player)
+        .outerjoin(left_player, Battle.left_player_id == left_player.id)
+        .outerjoin(right_player, Battle.right_player_id == right_player.id)
+        .where(
+            Battle.battle_type == PRIVATE_BATTLE_TYPE,
+            Battle.result_reason.is_not(None),
+        )
+        .order_by(Battle.finished_at.desc().nullslast(), Battle.updated_at.desc())
+        .limit(normalized_limit)
+    ).all()
+
+    return [
+        PrivateBattleResultItem(
+            id=battle.id,
+            title=battle.title,
+            left_player_name=_display_name(left_user),
+            left_player_username=left_user.username if left_user else None,
+            right_player_name=_display_name(right_user),
+            right_player_username=right_user.username if right_user else None,
+            winner_slot=(
+                "left"
+                if battle.winner_player_id is not None
+                and battle.winner_player_id == battle.left_player_id
+                else "right"
+                if battle.winner_player_id is not None
+                and battle.winner_player_id == battle.right_player_id
+                else None
+            ),
+            result_reason=battle.result_reason,
+            result_scores=battle.result_scores,
+            finished_at=battle.finished_at,
+            updated_at=battle.updated_at,
+        )
+        for battle, left_user, right_user in rows
+    ]
+
+
+def list_arena_battle_results(
+    db: Session,
+    limit: int = 10,
+) -> list[PrivateBattleResultItem]:
+    left_player = aliased(User)
+    right_player = aliased(User)
+    normalized_limit = max(1, min(limit, 50))
+
+    rows = db.execute(
+        select(Battle, left_player, right_player)
+        .outerjoin(left_player, Battle.left_player_id == left_player.id)
+        .outerjoin(right_player, Battle.right_player_id == right_player.id)
+        .where(
+            Battle.battle_type == "arena",
+            Battle.result_reason.is_not(None),
+        )
+        .order_by(Battle.finished_at.desc().nullslast(), Battle.updated_at.desc())
+        .limit(normalized_limit)
+    ).all()
+
+    return [
+        PrivateBattleResultItem(
+            id=battle.id,
+            title=battle.title,
+            left_player_name=_display_name(left_user),
+            left_player_username=left_user.username if left_user else None,
+            right_player_name=_display_name(right_user),
+            right_player_username=right_user.username if right_user else None,
+            winner_slot=(
+                "left"
+                if battle.winner_player_id is not None
+                and battle.winner_player_id == battle.left_player_id
+                else "right"
+                if battle.winner_player_id is not None
+                and battle.winner_player_id == battle.right_player_id
+                else None
+            ),
+            result_reason=battle.result_reason,
+            result_scores=battle.result_scores,
+            finished_at=battle.finished_at,
+            updated_at=battle.updated_at,
+        )
+        for battle, left_user, right_user in rows
+    ]
 
 
 def list_private_battle_users(
@@ -599,10 +821,10 @@ def get_private_battle_for_user(
     return _private_battle_response(battle, user_id, left_user, right_user)
 
 
-def create_private_battle(
+def create_private_battle_invite(
     db: Session,
-    payload: CreatePrivateBattleRequest,
-) -> PrivateBattleResponse:
+    payload: CreatePrivateBattleInviteRequest,
+) -> PrivateBattleInviteItem:
     inviter = db.get(User, payload.inviter_user_id)
     opponent = db.scalar(
         select(User).where(User.username == payload.opponent_username.strip())
@@ -614,43 +836,22 @@ def create_private_battle(
     if inviter.id == opponent.id:
         raise ValueError("Opponent must be different")
 
-    existing = db.scalar(
-        select(Battle).where(
-            Battle.battle_type == PRIVATE_BATTLE_TYPE,
-            Battle.status == BattleStatus.DRAFT,
-            or_(
-                and_(
-                    Battle.left_player_id == inviter.id,
-                    Battle.right_player_id == opponent.id,
-                ),
-                and_(
-                    Battle.left_player_id == opponent.id,
-                    Battle.right_player_id == inviter.id,
-                ),
-            ),
-        )
-    )
+    _ensure_no_open_private_battle(db, inviter.id, opponent.id)
+    _ensure_no_pending_private_invite(db, inviter.id, opponent.id)
 
-    if existing is not None:
-        raise ValueError("Open private battle already exists for these players")
-
-    battle = Battle(
-        title=f"{_display_name(inviter)} vs {_display_name(opponent)}",
-        battle_type=PRIVATE_BATTLE_TYPE,
-        status=BattleStatus.DRAFT,
-        left_player_id=inviter.id,
-        right_player_id=opponent.id,
-        map_config=_generate_private_battle_map_config(),
-        created_by=inviter.id,
+    invite = PrivateBattleInvite(
+        inviter_user_id=inviter.id,
+        opponent_user_id=opponent.id,
+        status=PRIVATE_BATTLE_INVITE_PENDING,
     )
-    db.add(battle)
+    db.add(invite)
     db.flush()
 
     db.add(
         AuditLog(
-            action="private_battle_created",
-            entity_type="battle",
-            entity_id=str(battle.id),
+            action="private_battle_invite_created",
+            entity_type="private_battle_invite",
+            entity_id=str(invite.id),
             payload={
                 "inviter_user_id": inviter.id,
                 "opponent_user_id": opponent.id,
@@ -661,9 +862,83 @@ def create_private_battle(
     )
 
     db.commit()
+    db.refresh(invite)
+
+    return _private_battle_invite_item(invite, inviter.id, inviter, opponent)
+
+
+def accept_private_battle_invite(
+    db: Session,
+    invite_id: int,
+    payload: PrivateBattleActorRequest,
+) -> PrivateBattleResponse:
+    invite = db.get(PrivateBattleInvite, invite_id)
+
+    if invite is None or invite.status != PRIVATE_BATTLE_INVITE_PENDING:
+        raise ValueError("Pending invite not found")
+
+    if invite.opponent_user_id != payload.user_id:
+        raise ValueError("Only invited player can accept this invite")
+
+    inviter = db.get(User, invite.inviter_user_id)
+    opponent = db.get(User, invite.opponent_user_id)
+
+    if inviter is None or opponent is None:
+        raise ValueError("Players not found")
+
+    _ensure_no_open_private_battle(db, inviter.id, opponent.id)
+
+    battle = _create_private_battle_from_users(db, inviter, opponent)
+    invite.status = PRIVATE_BATTLE_INVITE_ACCEPTED
+    invite.battle_id = battle.id
+
+    db.add(
+        AuditLog(
+            action="private_battle_invite_accepted",
+            entity_type="private_battle_invite",
+            entity_id=str(invite.id),
+            payload={"battle_id": battle.id},
+            actor_user_id=payload.user_id,
+        )
+    )
+
+    db.commit()
     db.refresh(battle)
 
-    return _private_battle_response(battle, inviter.id, inviter, opponent)
+    return _private_battle_response(battle, payload.user_id, inviter, opponent)
+
+
+def decline_private_battle_invite(
+    db: Session,
+    invite_id: int,
+    payload: PrivateBattleActorRequest,
+) -> PrivateBattleInviteItem:
+    invite = db.get(PrivateBattleInvite, invite_id)
+
+    if invite is None or invite.status != PRIVATE_BATTLE_INVITE_PENDING:
+        raise ValueError("Pending invite not found")
+
+    if invite.opponent_user_id != payload.user_id:
+        raise ValueError("Only invited player can decline this invite")
+
+    inviter = db.get(User, invite.inviter_user_id)
+    opponent = db.get(User, invite.opponent_user_id)
+    invite.status = PRIVATE_BATTLE_INVITE_DECLINED
+
+    db.add(
+        AuditLog(
+            action="private_battle_invite_declined",
+            entity_type="private_battle_invite",
+            entity_id=str(invite.id),
+            payload=None,
+            actor_user_id=payload.user_id,
+        )
+    )
+
+    db.commit()
+    db.refresh(invite)
+
+    return _private_battle_invite_item(invite, payload.user_id, inviter, opponent)
 
 
 def update_private_battle_code(
@@ -762,8 +1037,10 @@ def reroll_private_battle_map(
 
     if slot == "left":
         battle.left_map_change_requested = True
+        battle.left_map_confirmed = False
     else:
         battle.right_map_change_requested = True
+        battle.right_map_confirmed = False
 
     if battle.left_map_change_requested and battle.right_map_change_requested:
         battle.map_config = _generate_private_battle_map_config()
@@ -772,6 +1049,8 @@ def reroll_private_battle_map(
         battle.right_ready = False
         battle.left_map_change_requested = False
         battle.right_map_change_requested = False
+        battle.left_map_confirmed = False
+        battle.right_map_confirmed = False
         battle.status = BattleStatus.DRAFT
 
     db.add(
@@ -784,6 +1063,45 @@ def reroll_private_battle_map(
                 "map_revision": battle.map_revision,
                 "rerolled": not battle.left_map_change_requested and not battle.right_map_change_requested,
             },
+            actor_user_id=payload.user_id,
+        )
+    )
+
+    db.commit()
+    db.refresh(battle)
+
+    return get_private_battle_for_user(db, battle.id, payload.user_id)
+
+
+def confirm_private_battle_map(
+    db: Session,
+    battle_id: int,
+    payload: PrivateBattleActorRequest,
+) -> PrivateBattleResponse:
+    battle = _get_private_battle_for_user(db, battle_id, payload.user_id)
+
+    if _is_private_battle_locked(battle):
+        raise ValueError("Private battle is locked after both players confirmed readiness")
+
+    slot = _resolve_slot(battle, payload.user_id)
+
+    if slot == "left":
+        battle.left_map_confirmed = True
+        battle.left_map_change_requested = False
+        battle.left_ready = False
+    else:
+        battle.right_map_confirmed = True
+        battle.right_map_change_requested = False
+        battle.right_ready = False
+
+    battle.status = BattleStatus.DRAFT
+
+    db.add(
+        AuditLog(
+            action="private_battle_map_confirmed",
+            entity_type="battle",
+            entity_id=str(battle.id),
+            payload={"slot": slot, "map_revision": battle.map_revision},
             actor_user_id=payload.user_id,
         )
     )
@@ -808,10 +1126,14 @@ def mark_private_battle_ready(
     if slot == "left":
         if not battle.left_code_confirmed:
             raise ValueError("Confirm your code before marking ready")
+        if not battle.left_map_confirmed:
+            raise ValueError("Confirm the map before marking ready")
         battle.left_ready = True
     else:
         if not battle.right_code_confirmed:
             raise ValueError("Confirm your code before marking ready")
+        if not battle.right_map_confirmed:
+            raise ValueError("Confirm the map before marking ready")
         battle.right_ready = True
 
     if not battle.left_code or not battle.right_code:

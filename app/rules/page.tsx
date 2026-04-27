@@ -40,6 +40,29 @@ const scoreRows = [
   ['Более ранний выход', '+25'],
 ];
 
+const shortRules = [
+  {
+    title: 'Цель',
+    text: 'Довести оператора до выхода. Ключи дают очки и помогают сравнить игроков, если никто не вышел.',
+  },
+  {
+    title: 'Победа',
+    text: 'Если вышли оба, побеждает более быстрый. Если вышел один, побеждает он. Если никто не вышел, решают ключи или ничья.',
+  },
+  {
+    title: 'Карты',
+    text: 'Проверяйте код на фиксированной карте, случайной генерации и сценарии из конструктора.',
+  },
+  {
+    title: 'Перед отправкой',
+    text: 'Код должен работать без внешних библиотек, сетевых запросов, DOM и бесконечных циклов.',
+  },
+  {
+    title: 'Приватные бои',
+    text: 'Комната создаётся после принятия приглашения. Код, карта и готовность подтверждаются до старта.',
+  },
+];
+
 export default function RulesPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
@@ -51,6 +74,27 @@ export default function RulesPage() {
           Правила
         </h1>
       </header>
+
+      <section className="mb-5 rounded-[2rem] border border-slate-200 bg-[linear-gradient(180deg,#eef4ff_0%,#ffffff_100%)] px-6 py-7 shadow-[0_18px_60px_-44px_rgba(15,23,42,0.32)]">
+        <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+          Коротко
+        </p>
+        <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white/85">
+          {shortRules.map((rule) => (
+            <div
+              key={rule.title}
+              className="grid gap-2 border-b border-slate-200 px-4 py-3 last:border-b-0 md:grid-cols-[180px_1fr] md:items-start"
+            >
+              <p className="text-sm font-semibold text-slate-950 md:pt-0.5">
+                {rule.title}
+              </p>
+              <p className="text-sm leading-6 text-slate-600">
+                {rule.text}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className="grid gap-5 xl:grid-cols-12">
         <article className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_18px_60px_-44px_rgba(15,23,42,0.32)] xl:col-span-7">
@@ -172,8 +216,12 @@ export default function RulesPage() {
                 <Bot className="h-5 w-5" />
               </div>
               <h2 className="mt-5 text-2xl font-semibold text-slate-950">
-                Что делать перед отправкой
+                Перед отправкой
               </h2>
+              <p className="mt-3 text-sm leading-7 text-slate-700">
+                Прогони стратегию в трёх условиях, чтобы модерация получила не
+                случайно рабочий код, а устойчивое решение.
+              </p>
               <ol className="mt-6 space-y-3">
                 {preflightChecks.map((item, index) => (
                   <li
@@ -201,7 +249,7 @@ export default function RulesPage() {
                 случайной или своей из конструктора.
               </p>
               <div className="mt-6 grid grid-cols-3 gap-3">
-                <div className="aspect-square rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(135deg,#eef2ff_0%,#fff_100%)] p-3">
+                <div className="aspect-square rounded-3xl border border-slate-200 bg-[linear-gradient(135deg,#eef2ff_0%,#fff_100%)] p-3">
                   <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
                     Fixed
                   </p>
@@ -374,17 +422,6 @@ export default function RulesPage() {
               стратегию.
             </li>
           </ul>
-        </article>
-
-        <article className="rounded-[2rem] border border-slate-200 bg-[linear-gradient(180deg,#eef4ff_0%,#ffffff_100%)] px-6 py-7 shadow-[0_18px_60px_-44px_rgba(15,23,42,0.32)] xl:col-span-7">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-            Коротко
-          </p>
-          <p className="mt-4 max-w-4xl text-2xl font-semibold leading-tight text-slate-950">
-            Нормальная стратегия не должна жить на одной удобной карте. Проверяй
-            её на фиксированной схеме, на случайной генерации и на своём
-            собранном сценарии, а потом уже отправляй на модерацию.
-          </p>
         </article>
       </section>
     </div>

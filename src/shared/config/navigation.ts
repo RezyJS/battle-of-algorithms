@@ -1,6 +1,7 @@
 import {
   BookOpen,
   Code2,
+  Home,
   PenTool,
   Shield,
   Swords,
@@ -21,7 +22,8 @@ type MenuItem = {
 };
 
 export const publicNavItems: NavItem[] = [
-  { href: '/', label: 'Арена', icon: Swords },
+  { href: '/', label: 'Главная', icon: Home },
+  { href: '/arena', label: 'Арена', icon: Swords },
   { href: '/editor', label: 'Редактор', icon: Code2 },
   { href: '/rules', label: 'Правила', icon: BookOpen },
 ] ;
@@ -34,8 +36,14 @@ export const privateNavItem: NavItem = {
 
 export const battleMenuItems: MenuItem[] = [
   {
-    title: 'Арена',
+    title: 'Главная',
     href: '/',
+    description: 'Короткое объяснение проекта и быстрый старт.',
+    icon: Home,
+  },
+  {
+    title: 'Арена',
+    href: '/arena',
     description: 'Публичные показы и текущий активный бой.',
     icon: Swords,
   },
@@ -55,6 +63,13 @@ export const battleMenuItems: MenuItem[] = [
 
 export const moderationNavItems: (MenuItem & { label: string })[] = [
   {
+    href: '/map-editor',
+    label: 'Конструктор',
+    title: 'Конструктор карты',
+    description: 'Быстрый доступ к редактору общей карты.',
+    icon: PenTool,
+  },
+  {
     href: '/moderation',
     label: 'Отправки',
     title: 'Отправки',
@@ -67,12 +82,5 @@ export const moderationNavItems: (MenuItem & { label: string })[] = [
     title: 'Состав арены',
     description: 'Назначение пары и настройка общей конфигурации боя.',
     icon: Swords,
-  },
-  {
-    href: '/map-editor',
-    label: 'Конструктор',
-    title: 'Конструктор карты',
-    description: 'Редактирование общей карты для активного боя.',
-    icon: PenTool,
   },
 ];

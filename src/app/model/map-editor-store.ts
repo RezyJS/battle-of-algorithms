@@ -24,7 +24,7 @@ export interface BrushOption {
 
 export const BRUSH_OPTIONS: BrushOption[] = [
   { type: 'wall', label: 'Стена', icon: '🧱', hotkey: '1' },
-  { type: 'empty', label: 'Пустота', icon: '·', hotkey: '2' },
+  { type: 'empty', label: 'Пустота', icon: '🌫️', hotkey: '2' },
   { type: 'key1', label: 'Ключ 1', icon: '🔑', hotkey: '3' },
   { type: 'key2', label: 'Ключ 2', icon: '🗝️', hotkey: '4' },
   { type: 'exit', label: 'Выход', icon: '🚪', hotkey: '5' },
@@ -185,8 +185,7 @@ export const useMapEditorStore = create<MapEditorState>((set, get) => ({
       clearUniqueTool(nextGrid, activeTool);
     }
 
-    nextGrid[y][x] =
-      activeTool === 'empty' ? FieldContent.EMPTY : activeTool;
+    nextGrid[y][x] = activeTool === 'empty' ? FieldContent.EMPTY : activeTool;
 
     set({
       grid: nextGrid,

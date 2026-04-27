@@ -10,6 +10,14 @@ import {
 import type { ActiveBattle, ArenaUserOption } from '@/src/shared/lib/api/internal';
 import type { ArenaMapConfig } from '@/src/shared/lib/arena-config';
 import { MAP_SIZE_LIMITS } from '@/src/app/model/game-store';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select';
 
 const CUSTOM_MAP_DRAFT_KEY = 'boa-arena-custom-map-draft';
 
@@ -78,7 +86,7 @@ export function ArenaSetupForm({
   return (
     <form
       action={assignAction}
-      className="rounded-2xl border border-slate-200 bg-white/85 p-5 space-y-5 shadow-sm"
+      className="rounded-xl border border-slate-200 bg-white p-5 space-y-5 shadow-sm"
     >
       <div>
         <h2 className="text-lg font-semibold text-slate-950">Подтвердить арену</h2>
@@ -91,78 +99,104 @@ export function ArenaSetupForm({
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2">
           <span className="text-sm text-slate-700">Игрок слева</span>
-          <select
+          <Select
             name="left_player_id"
-            defaultValue={activeBattle?.left_player_id ?? ''}
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-500"
+            defaultValue={
+              activeBattle?.left_player_id ?
+                String(activeBattle.left_player_id)
+              : undefined
+            }
           >
-            <option value="" disabled>
-              Выбрать игрока
-            </option>
-            {users.map((player) => (
-              <option key={player.id} value={player.id}>
-                {player.display_name ?? player.username}
-                {player.approved_submission_version
-                  ? ` · v${player.approved_submission_version}`
-                  : ' · нет approved'}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full bg-white">
+              <SelectValue placeholder="Выбрать игрока" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {users.map((player) => (
+                  <SelectItem key={player.id} value={String(player.id)}>
+                    {player.display_name ?? player.username}
+                    {player.approved_submission_version
+                      ? ` · v${player.approved_submission_version}`
+                      : ' · нет approved'}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </label>
 
         <label className="space-y-2">
           <span className="text-sm text-slate-700">Игрок справа</span>
-          <select
+          <Select
             name="right_player_id"
-            defaultValue={activeBattle?.right_player_id ?? ''}
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-500"
+            defaultValue={
+              activeBattle?.right_player_id ?
+                String(activeBattle.right_player_id)
+              : undefined
+            }
           >
-            <option value="" disabled>
-              Выбрать игрока
-            </option>
-            {users.map((player) => (
-              <option key={player.id} value={player.id}>
-                {player.display_name ?? player.username}
-                {player.approved_submission_version
-                  ? ` · v${player.approved_submission_version}`
-                  : ' · нет approved'}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full bg-white">
+              <SelectValue placeholder="Выбрать игрока" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {users.map((player) => (
+                  <SelectItem key={player.id} value={String(player.id)}>
+                    {player.display_name ?? player.username}
+                    {player.approved_submission_version
+                      ? ` · v${player.approved_submission_version}`
+                      : ' · нет approved'}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </label>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2">
           <span className="text-sm text-slate-700">Режим</span>
-          <select
+          <Select
             name="game_mode"
             defaultValue={activeConfig?.gameMode ?? 'race'}
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-500"
           >
-            <option value="race">Гонка</option>
-            <option value="duel">Дуэль</option>
-          </select>
+            <SelectTrigger className="w-full bg-white">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="race">Гонка</SelectItem>
+                <SelectItem value="duel">Дуэль</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm text-slate-700">Тип карты</span>
-          <select
+          <span className="text-sm text-slate-700">Сценарий карты</span>
+          <Select
             name="map_type"
             value={selectedMapType}
-            onChange={(event) => setSelectedMapType(event.target.value)}
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-500"
+            onValueChange={setSelectedMapType}
           >
-            <option value="static">Фиксированная</option>
-            <option value="random">Случайная</option>
-            <option value="custom">Конструктор</option>
-          </select>
+            <SelectTrigger className="w-full bg-white">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="static">Фиксированная карта</SelectItem>
+                <SelectItem value="random">Случайная</SelectItem>
+                <SelectItem value="custom">Конструктор</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </label>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2">
-          <span className="text-sm text-slate-700">Ширина случайной карты</span>
+          <span className="text-sm text-slate-700">Ширина</span>
           <input
             name="width"
             type="number"
@@ -175,7 +209,7 @@ export function ArenaSetupForm({
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm text-slate-700">Высота случайной карты</span>
+          <span className="text-sm text-slate-700">Высота</span>
           <input
             name="height"
             type="number"
@@ -191,8 +225,8 @@ export function ArenaSetupForm({
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="font-medium text-slate-900">Кастомная карта</p>
-            <p className="mt-1">Соберите карту в конструкторе и сохраните черновик.</p>
+            <p className="font-medium text-slate-900">Карта из конструктора</p>
+            <p className="mt-1">Соберите сценарий и сохраните черновик для арены.</p>
           </div>
 
           <Link
@@ -232,7 +266,7 @@ export function ArenaSetupForm({
         </p>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <button
           type="submit"
           className="rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-500 shadow-sm"
@@ -242,9 +276,9 @@ export function ArenaSetupForm({
         <button
           type="submit"
           formAction={clearAction}
-          className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
+          className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100"
         >
-          Снять бой
+          Снять текущий бой
         </button>
       </div>
     </form>

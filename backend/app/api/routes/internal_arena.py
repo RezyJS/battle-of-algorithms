@@ -12,26 +12,34 @@ from app.schemas.battle import (
     ActiveBattleResponse,
     ArenaUserOption,
     BattleResponse,
-    CreatePrivateBattleRequest,
+    CreatePrivateBattleInviteRequest,
     PrivateBattleActorRequest,
+    PrivateBattleInviteItem,
     SetActiveBattleRequest,
     PrivateBattleListItem,
     PrivateBattleResponse,
+    PrivateBattleResultItem,
     PrivateBattleUserOption,
     SavePrivateBattleResultRequest,
     UpdateActiveBattleConfigRequest,
     UpdatePrivateBattleCodeRequest,
 )
 from app.services.battle_service import (
+    accept_private_battle_invite,
     clear_active_battle,
-    create_private_battle,
+    create_private_battle_invite,
+    decline_private_battle_invite,
     get_active_battle,
+    list_arena_battle_results,
     get_private_battle_for_user,
     list_arena_users,
     list_private_battles_for_user,
+    list_private_battle_invites_for_user,
+    list_private_battle_results,
     list_private_battle_users,
     mark_private_battle_ready,
     confirm_private_battle_code,
+    confirm_private_battle_map,
     reroll_private_battle_map,
     save_private_battle_result,
     set_active_battle,
@@ -132,6 +140,89 @@ def read_private_battles(
     return list_private_battles_for_user(db, user_id)
 
 
+@router.get("/private-battle-invites", response_model=list[PrivateBattleInviteItem])
+def read_private_battle_invites(
+    user_id: int,
+    db: Session = Depends(get_db),
+    x_internal_api_secret: str = Header(default=""),
+) -> list[PrivateBattleInviteItem]:
+    validate_internal_secret(x_internal_api_secret)
+    return list_private_battle_invites_for_user(db, user_id)
+
+
+@router.post("/private-battle-invites", response_model=PrivateBattleInviteItem)
+def write_private_battle_invite(
+    payload: CreatePrivateBattleInviteRequest,
+    db: Session = Depends(get_db),
+    x_internal_api_secret: str = Header(default=""),
+) -> PrivateBattleInviteItem:
+    validate_internal_secret(x_internal_api_secret)
+
+    try:
+        return create_private_battle_invite(db, payload)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+
+@router.post("/private-battle-invites/{invite_id}/accept", response_model=PrivateBattleResponse)
+def accept_private_battle_invite_route(
+    invite_id: int,
+    payload: PrivateBattleActorRequest,
+    db: Session = Depends(get_db),
+    x_internal_api_secret: str = Header(default=""),
+) -> PrivateBattleResponse:
+    validate_internal_secret(x_internal_api_secret)
+
+    try:
+        return accept_private_battle_invite(db, invite_id, payload)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+
+@router.post("/private-battle-invites/{invite_id}/decline", response_model=PrivateBattleInviteItem)
+def decline_private_battle_invite_route(
+    invite_id: int,
+    payload: PrivateBattleActorRequest,
+    db: Session = Depends(get_db),
+    x_internal_api_secret: str = Header(default=""),
+) -> PrivateBattleInviteItem:
+    validate_internal_secret(x_internal_api_secret)
+
+    try:
+        return decline_private_battle_invite(db, invite_id, payload)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+
+@router.get("/private-battles/results", response_model=list[PrivateBattleResultItem])
+def read_private_battle_results(
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    x_internal_api_secret: str = Header(default=""),
+) -> list[PrivateBattleResultItem]:
+    validate_internal_secret(x_internal_api_secret)
+    return list_private_battle_results(db, limit)
+
+
+@router.get("/battle-results", response_model=list[PrivateBattleResultItem])
+def read_arena_battle_results(
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    x_internal_api_secret: str = Header(default=""),
+) -> list[PrivateBattleResultItem]:
+    validate_internal_secret(x_internal_api_secret)
+    return list_arena_battle_results(db, limit)
+
+
 @router.get("/private-battle-users", response_model=list[PrivateBattleUserOption])
 def read_private_battle_users(
     user_id: int,
@@ -157,23 +248,6 @@ def read_private_battle(
     except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(error),
-        ) from error
-
-
-@router.post("/private-battles", response_model=PrivateBattleResponse)
-def write_private_battle(
-    payload: CreatePrivateBattleRequest,
-    db: Session = Depends(get_db),
-    x_internal_api_secret: str = Header(default=""),
-) -> PrivateBattleResponse:
-    validate_internal_secret(x_internal_api_secret)
-
-    try:
-        return create_private_battle(db, payload)
-    except ValueError as error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(error),
         ) from error
 
@@ -225,6 +299,24 @@ def reroll_private_battle_map_route(
 
     try:
         return reroll_private_battle_map(db, battle_id, payload)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+
+@router.post("/private-battles/{battle_id}/confirm-map", response_model=PrivateBattleResponse)
+def confirm_private_battle_map_route(
+    battle_id: int,
+    payload: PrivateBattleActorRequest,
+    db: Session = Depends(get_db),
+    x_internal_api_secret: str = Header(default=""),
+) -> PrivateBattleResponse:
+    validate_internal_secret(x_internal_api_secret)
+
+    try:
+        return confirm_private_battle_map(db, battle_id, payload)
     except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

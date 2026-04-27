@@ -51,6 +51,8 @@ class PrivateBattleListItem(BaseModel):
     right_code_confirmed: bool
     left_map_change_requested: bool
     right_map_change_requested: bool
+    left_map_confirmed: bool
+    right_map_confirmed: bool
     map_revision: int
     has_result: bool
     winner_player_id: Optional[int] = None
@@ -59,6 +61,35 @@ class PrivateBattleListItem(BaseModel):
     result_scores: Optional[list[int]] = None
     finished_at: Optional[datetime] = None
     current_user_slot: str
+    updated_at: datetime
+
+
+class PrivateBattleResultItem(BaseModel):
+    id: int
+    title: str
+    left_player_name: Optional[str] = None
+    left_player_username: Optional[str] = None
+    right_player_name: Optional[str] = None
+    right_player_username: Optional[str] = None
+    winner_slot: Optional[str] = None
+    result_reason: Optional[str] = None
+    result_scores: Optional[list[int]] = None
+    finished_at: Optional[datetime] = None
+    updated_at: datetime
+
+
+class PrivateBattleInviteItem(BaseModel):
+    id: int
+    status: str
+    inviter_user_id: int
+    opponent_user_id: int
+    inviter_name: Optional[str] = None
+    inviter_username: Optional[str] = None
+    opponent_name: Optional[str] = None
+    opponent_username: Optional[str] = None
+    battle_id: Optional[int] = None
+    current_user_role: str
+    created_at: datetime
     updated_at: datetime
 
 
@@ -78,6 +109,8 @@ class PrivateBattleResponse(BaseModel):
     right_code_confirmed: bool
     left_map_change_requested: bool
     right_map_change_requested: bool
+    left_map_confirmed: bool
+    right_map_confirmed: bool
     map_revision: int
     current_user_slot: str
     current_user_code: str
@@ -113,7 +146,7 @@ class UpdateActiveBattleConfigRequest(BaseModel):
     map_config: dict[str, Any]
 
 
-class CreatePrivateBattleRequest(BaseModel):
+class CreatePrivateBattleInviteRequest(BaseModel):
     inviter_user_id: int
     opponent_username: str
 

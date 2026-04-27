@@ -24,7 +24,6 @@ export default async function EditorMapPage() {
       draftMode
       returnTo="/editor"
       draftStorageKey="boa-editor-custom-map-draft"
-      showModerationNav={false}
       title="Конструктор тестовой карты"
       description="Соберите карту для локального прогона алгоритма в редакторе. Она не влияет на аренную конфигурацию."
     />

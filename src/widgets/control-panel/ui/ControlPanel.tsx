@@ -2,7 +2,7 @@
 
 import type { StateSnapshot } from '@/src/shared/model';
 import type { GameResult, GameMode } from '@/src/app/model/game-store';
-import { SPEED_OPTIONS } from '@/src/app/model/game-store';
+import { MAX_BATTLE_STEPS, SPEED_OPTIONS } from '@/src/app/model/game-store';
 import type { ActiveBattle } from '@/src/shared/lib/api/internal';
 import type { ArenaMapType } from '@/src/shared/lib/arena-config';
 import {
@@ -65,7 +65,10 @@ export function ControlPanel({
 }: ControlPanelProps) {
   const maxSteps =
     histories.length > 0 ?
-      Math.max(...histories.map((history) => history.length - 1))
+      Math.max(
+        MAX_BATTLE_STEPS,
+        ...histories.map((history) => history.length - 1),
+      )
     : 0;
   const progress = maxSteps > 0 ? (currentStep / maxSteps) * 100 : 0;
 

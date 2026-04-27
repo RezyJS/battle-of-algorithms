@@ -34,6 +34,32 @@ const STATUS_BUTTON_STYLES: Record<(typeof STATUS_OPTIONS)[number][0], string> =
     'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100',
 };
 
+const STATUS_BADGE_LABELS: Record<string, string> = {
+  draft: 'Черновик',
+  submitted: 'Отправлено',
+  under_review: 'На проверке',
+  approved: 'Одобрено',
+  rejected: 'Отклонено',
+  returned: 'На доработке',
+};
+
+const STATUS_BADGE_STYLES: Record<string, string> = {
+  draft: 'border-slate-200 bg-slate-50 text-slate-700',
+  submitted: 'border-blue-200 bg-blue-50 text-blue-800',
+  under_review: 'border-sky-200 bg-sky-50 text-sky-800',
+  approved: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  rejected: 'border-rose-200 bg-rose-50 text-rose-800',
+  returned: 'border-amber-200 bg-amber-50 text-amber-800',
+};
+
+function formatSubmissionStatus(status: string) {
+  return STATUS_BADGE_LABELS[status] ?? status;
+}
+
+function getSubmissionStatusClassName(status: string) {
+  return STATUS_BADGE_STYLES[status] ?? STATUS_BADGE_STYLES.draft;
+}
+
 function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleString('ru-RU') : null;
 }
@@ -60,7 +86,7 @@ export function ModerationSubmissionCard({
   const createdAt = formatDate(submission.created_at);
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm">
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-indigo-600">
@@ -74,8 +100,12 @@ export function ModerationSubmissionCard({
           </p>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-800">
-          {submission.status}
+        <div
+          className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${getSubmissionStatusClassName(
+            submission.status,
+          )}`}
+        >
+          {formatSubmissionStatus(submission.status)}
         </div>
       </div>
 
@@ -88,7 +118,7 @@ export function ModerationSubmissionCard({
         )}
       </div>
 
-      <div className="mt-4 rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/70 p-6">
+      <div className="mt-4 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/70 p-6">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="flex size-12 items-center justify-center rounded-full bg-white text-indigo-600 shadow-sm">
             <FileCode2 className="size-5" />
@@ -126,7 +156,7 @@ export function ModerationSubmissionCard({
               <div className="flex-1 overflow-y-auto px-4 pb-4">
                 <div className="flex flex-col gap-5">
                   <div className="text-sm">
-                    <p>Статус: {submission.status}</p>
+                    <p>Статус: {formatSubmissionStatus(submission.status)}</p>
                     <p className="mt-1">{stats.lines} строк, {stats.chars} символов</p>
                   </div>
 

@@ -1,6 +1,9 @@
 import { AuthRequiredCard } from '@/src/features/auth/ui/AuthRequiredCard';
 import { PrivateBattlesPageClient } from '@/src/features/private-battles/ui/PrivateBattlesPageClient';
-import { getPrivateBattles } from '@/src/shared/lib/api/internal';
+import {
+  getPrivateBattleInvites,
+  getPrivateBattles,
+} from '@/src/shared/lib/api/internal';
 import { getCurrentUser } from '@/src/shared/lib/auth/session';
 
 export default async function PrivateBattlesPage() {
@@ -18,12 +21,16 @@ export default async function PrivateBattlesPage() {
     );
   }
 
-  const privateBattles = await getPrivateBattles();
+  const [privateBattles, privateBattleInvites] = await Promise.all([
+    getPrivateBattles(),
+    getPrivateBattleInvites(),
+  ]);
 
   return (
     <PrivateBattlesPageClient
       currentUsername={user.username}
       initialBattles={privateBattles}
+      initialInvites={privateBattleInvites}
     />
   );
 }

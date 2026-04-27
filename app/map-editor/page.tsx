@@ -61,7 +61,6 @@ export default async function MapEditorPage({
       draftMode={draftMode}
       returnTo={returnTo}
       draftStorageKey='boa-arena-custom-map-draft'
-      showModerationNav
       title='Конструктор карт'
     />
   );

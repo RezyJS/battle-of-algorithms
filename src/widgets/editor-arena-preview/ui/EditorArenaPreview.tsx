@@ -21,6 +21,14 @@ import { ControlPanel } from '@/src/widgets/control-panel';
 import { EventLog } from '@/src/widgets/event-log';
 import { GameBoard } from '@/src/widgets/game-board';
 import { cn } from '@/src/shared/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select';
 
 const CUSTOM_MAP_DRAFT_KEY = 'boa-editor-custom-map-draft';
 
@@ -141,44 +149,55 @@ export function EditorArenaPreview() {
         <div className='flex gap-3'>
           <label className='flex flex-col gap-1 text-sm text-slate-600'>
             <span className='text-xs'>Карта для теста</span>
-            <select
-              className='rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-indigo-500'
+            <Select
               value={mapType}
-              onChange={(event) =>
-                setMapType(event.target.value as 'static' | 'random' | 'custom')
+              onValueChange={(value) =>
+                setMapType(value as 'static' | 'random' | 'custom')
               }
               disabled={isRunning}
             >
-              <option value='static'>Фиксированная</option>
-              <option value='random'>Случайная</option>
-              <option value='custom'>Из конструктора</option>
-            </select>
+              <SelectTrigger className='w-45 bg-white'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value='static'>Фиксированная</SelectItem>
+                  <SelectItem value='random'>Случайная</SelectItem>
+                  <SelectItem value='custom'>Из конструктора</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </label>
           <label className='flex flex-col gap-1 text-sm text-slate-600'>
             <span className='text-xs'>Тестовый соперник</span>
-            <select
-              className='rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-indigo-500'
+            <Select
               value={opponentTemplate}
-              onChange={(e) =>
-                setOpponentTemplate(e.target.value as AlgorithmTemplateName)
+              onValueChange={(value) =>
+                setOpponentTemplate(value as AlgorithmTemplateName)
               }
               disabled={isRunning}
             >
-              {Object.entries(algorithmTemplates).map(([key, template]) => (
-                <option
-                  key={key}
-                  value={key}
-                >
-                  {template.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className='w-47.5 bg-white'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {Object.entries(algorithmTemplates).map(([key, template]) => (
+                    <SelectItem
+                      key={key}
+                      value={key}
+                    >
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </label>
         </div>
       }
       className='mt-6'
       contentClassName='space-y-4'
-      defaultOpen
     >
       <div>
         <div className='flex gap-3 lg:items-start'>

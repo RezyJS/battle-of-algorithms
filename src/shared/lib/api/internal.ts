@@ -88,6 +88,8 @@ export type PrivateBattleListItem = {
   right_code_confirmed: boolean;
   left_map_change_requested: boolean;
   right_map_change_requested: boolean;
+  left_map_confirmed: boolean;
+  right_map_confirmed: boolean;
   map_revision: number;
   has_result: boolean;
   winner_player_id: number | null;
@@ -96,6 +98,35 @@ export type PrivateBattleListItem = {
   result_scores: number[] | null;
   finished_at: string | null;
   current_user_slot: 'left' | 'right';
+  updated_at: string;
+};
+
+export type PrivateBattleResultItem = {
+  id: number;
+  title: string;
+  left_player_name: string | null;
+  left_player_username: string | null;
+  right_player_name: string | null;
+  right_player_username: string | null;
+  winner_slot: 'left' | 'right' | null;
+  result_reason: string | null;
+  result_scores: number[] | null;
+  finished_at: string | null;
+  updated_at: string;
+};
+
+export type PrivateBattleInviteItem = {
+  id: number;
+  status: string;
+  inviter_user_id: number;
+  opponent_user_id: number;
+  inviter_name: string | null;
+  inviter_username: string | null;
+  opponent_name: string | null;
+  opponent_username: string | null;
+  battle_id: number | null;
+  current_user_role: 'inviter' | 'opponent';
+  created_at: string;
   updated_at: string;
 };
 
@@ -115,6 +146,8 @@ export type PrivateBattle = {
   right_code_confirmed: boolean;
   left_map_change_requested: boolean;
   right_map_change_requested: boolean;
+  left_map_confirmed: boolean;
+  right_map_confirmed: boolean;
   map_revision: number;
   current_user_slot: 'left' | 'right';
   current_user_code: string;
@@ -375,6 +408,37 @@ export async function getPrivateBattles(): Promise<PrivateBattleListItem[]> {
   );
 }
 
+export async function getPrivateBattleInvites(): Promise<PrivateBattleInviteItem[]> {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.appUserId) {
+    throw new Error('Current user does not have appUserId in session');
+  }
+
+  return safeInternalJson<PrivateBattleInviteItem[]>(
+    `/api/internal/arena/private-battle-invites?user_id=${currentUser.appUserId}`,
+    [],
+  );
+}
+
+export async function getPrivateBattleResults(
+  limit = 10,
+): Promise<PrivateBattleResultItem[]> {
+  return safeInternalJson<PrivateBattleResultItem[]>(
+    `/api/internal/arena/private-battles/results?limit=${limit}`,
+    [],
+  );
+}
+
+export async function getArenaBattleResults(
+  limit = 10,
+): Promise<PrivateBattleResultItem[]> {
+  return safeInternalJson<PrivateBattleResultItem[]>(
+    `/api/internal/arena/battle-results?limit=${limit}`,
+    [],
+  );
+}
+
 export async function getPrivateBattle(
   battleId: number,
 ): Promise<PrivateBattle | null> {
@@ -410,16 +474,16 @@ export async function getPrivateBattleUsers(
   );
 }
 
-export async function createPrivateBattle(
+export async function createPrivateBattleInvite(
   opponentUsername: string,
-): Promise<PrivateBattle> {
+): Promise<PrivateBattleInviteItem> {
   const currentUser = await getCurrentUser();
 
   if (!currentUser?.appUserId) {
     throw new Error('Current user does not have appUserId in session');
   }
 
-  const response = await internalFetch('/api/internal/arena/private-battles', {
+  const response = await internalFetch('/api/internal/arena/private-battle-invites', {
     method: 'POST',
     body: JSON.stringify({
       inviter_user_id: currentUser.appUserId,
@@ -427,7 +491,51 @@ export async function createPrivateBattle(
     }),
   });
 
+  return (await response.json()) as PrivateBattleInviteItem;
+}
+
+export async function acceptPrivateBattleInvite(
+  inviteId: number,
+): Promise<PrivateBattle> {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.appUserId) {
+    throw new Error('Current user does not have appUserId in session');
+  }
+
+  const response = await internalFetch(
+    `/api/internal/arena/private-battle-invites/${inviteId}/accept`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: currentUser.appUserId,
+      }),
+    },
+  );
+
   return (await response.json()) as PrivateBattle;
+}
+
+export async function declinePrivateBattleInvite(
+  inviteId: number,
+): Promise<PrivateBattleInviteItem> {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.appUserId) {
+    throw new Error('Current user does not have appUserId in session');
+  }
+
+  const response = await internalFetch(
+    `/api/internal/arena/private-battle-invites/${inviteId}/decline`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: currentUser.appUserId,
+      }),
+    },
+  );
+
+  return (await response.json()) as PrivateBattleInviteItem;
 }
 
 export async function savePrivateBattleCode(
@@ -487,6 +595,28 @@ export async function rerollPrivateBattleMap(
 
   const response = await internalFetch(
     `/api/internal/arena/private-battles/${battleId}/reroll-map`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        user_id: currentUser.appUserId,
+      }),
+    },
+  );
+
+  return (await response.json()) as PrivateBattle;
+}
+
+export async function confirmPrivateBattleMap(
+  battleId: number,
+): Promise<PrivateBattle> {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser?.appUserId) {
+    throw new Error('Current user does not have appUserId in session');
+  }
+
+  const response = await internalFetch(
+    `/api/internal/arena/private-battles/${battleId}/confirm-map`,
     {
       method: 'POST',
       body: JSON.stringify({

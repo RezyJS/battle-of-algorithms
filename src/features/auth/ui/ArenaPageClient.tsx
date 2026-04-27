@@ -17,9 +17,11 @@ import { ActiveBattlePage, NoBattlePage } from '@/src/widgets/arena-page';
 
 export function ArenaPageClient({
   canManageArena,
+  isAuthenticated,
   activeBattle,
 }: {
   canManageArena: boolean;
+  isAuthenticated: boolean;
   activeBattle: ActiveBattle | null;
 }) {
   usePollingRefresh(5000);
@@ -165,7 +167,7 @@ export function ArenaPageClient({
           scriptError={scriptError}
           messages={messages}
         />
-      : <NoBattlePage />}
+      : <NoBattlePage isAuthenticated={isAuthenticated} />}
     </div>
   );
 }

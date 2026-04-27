@@ -12,7 +12,6 @@ import {
   ChevronUp,
   Eraser,
   Info,
-  PenTool,
   WandSparkles,
 } from 'lucide-react';
 
@@ -24,7 +23,6 @@ import {
   sanitizeGrid,
 } from '@/src/app/model/map-editor-store';
 import { MAP_SIZE_LIMITS } from '@/src/app/model/game-store';
-import { ModerationNav } from '@/src/features/moderation/ui/ModerationNav';
 import { MapEditorGrid, ToolPalette } from '@/src/widgets/map-editor';
 import { applyCustomArenaMapAction } from '@/app/map-editor/actions';
 import {
@@ -67,7 +65,6 @@ export function MapEditorPageClient({
   draftMode,
   returnTo,
   draftStorageKey,
-  showModerationNav,
   title,
   description,
 }: {
@@ -76,7 +73,6 @@ export function MapEditorPageClient({
   draftMode: boolean;
   returnTo: string;
   draftStorageKey: string;
-  showModerationNav: boolean;
   title: string;
   description?: string;
 }) {
@@ -366,15 +362,12 @@ export function MapEditorPageClient({
 
   return (
     <div className='max-w-7xl mx-auto px-4 py-6'>
-      {showModerationNav && (
-        <div className='mb-4'>
-          <ModerationNav />
-        </div>
-      )}
-
       <div className='mb-6 flex gap-3 md:flex-row md:items-end md:justify-between'>
         <div>
           <h1 className='text-2xl font-bold text-slate-950'>{title}</h1>
+          {description && (
+            <p className='mt-1 text-sm text-slate-600'>{description}</p>
+          )}
         </div>
 
         <Link

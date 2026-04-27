@@ -20,7 +20,7 @@ export function ExpandableCard({
   meta,
   actions,
   children,
-  defaultOpen = true,
+  defaultOpen = false,
   className = '',
   contentClassName = '',
 }: ExpandableCardProps) {

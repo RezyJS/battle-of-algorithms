@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import {
   confirmPrivateBattleCode,
+  confirmPrivateBattleMap,
   markPrivateBattleReady,
   rerollPrivateBattleMap,
   savePrivateBattleCode,
@@ -66,6 +67,18 @@ export async function rerollPrivateBattleMapAction(
   await assertAuthenticated();
 
   const battle = await rerollPrivateBattleMap(battleId);
+  revalidatePath(`/private-battles/${battleId}`);
+  revalidatePath('/private-battles');
+
+  return battle;
+}
+
+export async function confirmPrivateBattleMapAction(
+  battleId: number,
+): Promise<PrivateBattle> {
+  await assertAuthenticated();
+
+  const battle = await confirmPrivateBattleMap(battleId);
   revalidatePath(`/private-battles/${battleId}`);
   revalidatePath('/private-battles');
 

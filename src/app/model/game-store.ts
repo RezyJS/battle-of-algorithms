@@ -42,6 +42,8 @@ const SPEED_OPTIONS = [
   { label: '8x', ms: 25 },
 ];
 
+const MAX_BATTLE_STEPS = 1000;
+
 const MAP_SIZE_LIMITS = {
   minWidth: 6,
   maxWidth: 20,
@@ -295,7 +297,12 @@ export const useGameStore = create<GameState>((set, get) => {
       set({ scriptError: '' });
 
       for (let i = 0; i < operators.length; i++) {
-        const error = executeScript(operators[i], scripts[i], 1000, gameMode);
+        const error = executeScript(
+          operators[i],
+          scripts[i],
+          MAX_BATTLE_STEPS,
+          gameMode,
+        );
         if (error) {
           set({ scriptError: error });
           return;
@@ -303,7 +310,10 @@ export const useGameStore = create<GameState>((set, get) => {
       }
 
       const histories = operators.map((op) => op.getHistory());
-      const effectiveMaxStep = computeEffectiveMaxStep(histories);
+      const effectiveMaxStep = Math.max(
+        MAX_BATTLE_STEPS,
+        computeEffectiveMaxStep(histories),
+      );
       set({ histories, currentStep: 0, messages: [], result: null, effectiveMaxStep });
     },
 
@@ -497,5 +507,5 @@ export const useGameStore = create<GameState>((set, get) => {
   };
 });
 
-export { PLAYERS, SPEED_OPTIONS, MAP_SIZE_LIMITS };
+export { PLAYERS, SPEED_OPTIONS, MAP_SIZE_LIMITS, MAX_BATTLE_STEPS };
 export type { PlayerConfig };

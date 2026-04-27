@@ -86,6 +86,18 @@ class Battle(TimestampMixin, Base):
         default=False,
         server_default="false",
     )
+    left_map_confirmed: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+    right_map_confirmed: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
     map_revision: Mapped[int] = mapped_column(
         Integer,
         nullable=False,

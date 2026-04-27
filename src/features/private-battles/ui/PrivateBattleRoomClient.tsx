@@ -1,17 +1,10 @@
 'use client';
 
-import {
-  MouseEvent,
-  startTransition,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   CheckCircle2,
-  ChevronDown,
   CircleCheckBig,
   CurlyBraces,
   Map,
@@ -21,15 +14,20 @@ import {
   Swords,
 } from 'lucide-react';
 
+import { createPrivateBattleAction } from '@/app/private-battles/actions';
 import {
   confirmPrivateBattleCodeAction,
+  confirmPrivateBattleMapAction,
   markPrivateBattleReadyAction,
   rerollPrivateBattleMapAction,
   savePrivateBattleCodeAction,
   savePrivateBattleResultAction,
 } from '@/app/private-battles/[battleId]/actions';
 import { useGameStore, SPEED_OPTIONS } from '@/src/app/model/game-store';
-import { ScriptEditor } from '@/src/features/script-editor';
+import {
+  OperatorApiReference,
+  ScriptEditor,
+} from '@/src/features/script-editor';
 import type { GameResult } from '@/src/app/model/game-store';
 import type {
   ActiveBattle,
@@ -55,57 +53,115 @@ type TUserCard = {
   userUsername: string;
   isCodeApplied: boolean;
   isMapChangeRequested: boolean;
+  isMapConfirmed: boolean;
   isUserReady: boolean;
 };
 
-function UserCard(user: TUserCard) {
+type RoomTab = 'code' | 'map' | 'battle';
+
+function StateDot({
+  active,
+  label,
+  title,
+  tone = 'green',
+  icon: Icon,
+}: {
+  active: boolean;
+  label: string;
+  title: string;
+  tone?: 'green' | 'amber';
+  icon: typeof CircleCheckBig;
+}) {
+  return (
+    <div
+      title={title}
+      className={cn(
+        'inline-flex h-7 items-center gap-1.5 rounded-lg border px-2 text-xs font-medium leading-none',
+        active ?
+          tone === 'amber' ?
+            'border-amber-200 bg-amber-50 text-amber-800'
+          : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+        : 'border-slate-200 bg-slate-50 text-slate-500',
+      )}
+    >
+      <Icon className='h-3.5 w-3.5' />
+      {label}
+    </div>
+  );
+}
+
+function MapStateDot({
+  isChangeRequested,
+  isConfirmed,
+}: {
+  isChangeRequested: boolean;
+  isConfirmed: boolean;
+}) {
+  const label = isChangeRequested ? 'Смена' : 'Карта';
+  const title =
+    isChangeRequested ? 'Игрок запросил смену карты'
+    : isConfirmed ? 'Игрок подтвердил текущую карту'
+    : 'Игрок ещё не подтвердил карту и не просит смену';
+
+  return (
+    <div
+      title={title}
+      className={cn(
+        'inline-flex h-7 items-center gap-1.5 rounded-lg border px-2 text-xs font-medium leading-none',
+        isChangeRequested ? 'border-amber-200 bg-amber-50 text-amber-800'
+        : isConfirmed ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+        : 'border-slate-200 bg-slate-50 text-slate-500',
+      )}
+    >
+      <Map className='h-3.5 w-3.5' />
+      {label}
+    </div>
+  );
+}
+
+function PlayerStatusCard(user: TUserCard) {
   const {
     title,
     userName,
     userUsername,
     isCodeApplied,
     isMapChangeRequested,
+    isMapConfirmed,
     isUserReady,
   } = user;
 
   return (
-    <div>
-      <div className='text-xs uppercase tracking-[0.18em] text-slate-500'>
-        {title}
-      </div>
-      <div className='flex justify-between items-center'>
-        <div className='flex gap-1 items-end mt-2 text-lg font-semibold text-slate-950'>
-          <p>{userName}</p>
-          <div className='text-sm text-slate-500'>{`(@${userUsername})`}</div>
+    <div className='rounded-xl border border-slate-200 bg-white px-3 py-2.5'>
+      <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+        <div className='min-w-0'>
+          <div className='text-[11px] uppercase tracking-[0.16em] text-slate-500'>
+            {title}
+          </div>
+          <div className='mt-0.5 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5'>
+            <p className='truncate text-sm font-semibold text-slate-950'>
+              {userName}
+            </p>
+            <p className='text-xs text-slate-500'>@{userUsername}</p>
+          </div>
         </div>
 
-        <div>
-          <div className='flex gap-2 mt-2'>
-            <div
-              className={cn(
-                'px-4 py-1.5 rounded-sm text-white',
-                isCodeApplied ? 'bg-green-600' : 'bg-red-600',
-              )}
-            >
-              <CurlyBraces className='w-6 h-6' />
-            </div>
-            <div
-              className={cn(
-                'px-4 py-1.5 rounded-sm text-white',
-                isMapChangeRequested ? 'bg-amber-600' : 'bg-green-600',
-              )}
-            >
-              <Map className='w-6 h-6' />
-            </div>
-            <div
-              className={cn(
-                'px-4 py-1.5 rounded-sm text-white',
-                isUserReady ? 'bg-green-600' : 'bg-red-600',
-              )}
-            >
-              <CircleCheckBig className='w-6 h-6' />
-            </div>
-          </div>
+        <div className='flex flex-wrap gap-1.5'>
+          <StateDot
+            active={isCodeApplied}
+            label='Код'
+            title='Код сохранён и подтверждён игроком'
+            icon={CurlyBraces}
+          />
+          <MapStateDot
+            isChangeRequested={isMapChangeRequested}
+            isConfirmed={isMapConfirmed}
+          />
+          <StateDot
+            active={isUserReady}
+            label='Готов'
+            title='Игрок подтвердил финальную готовность'
+            icon={CircleCheckBig}
+          />
         </div>
       </div>
     </div>
@@ -117,6 +173,7 @@ export function PrivateBattleRoomClient({
 }: {
   battle: PrivateBattle;
 }) {
+  const router = useRouter();
   const appliedScriptsKeyRef = useRef<string | null>(null);
   const appliedConfigKeyRef = useRef<string | null>(null);
   const restoredPlaybackKeyRef = useRef<string | null>(null);
@@ -126,15 +183,18 @@ export function PrivateBattleRoomClient({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isConfirmingCode, setIsConfirmingCode] = useState(false);
+  const [isConfirmingMap, setIsConfirmingMap] = useState(false);
+  const [isCreatingRematch, setIsCreatingRematch] = useState(false);
   const [isRerollingMap, setIsRerollingMap] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSavingResult, setIsSavingResult] = useState(false);
-  const [isMapSectionOpen, setIsMapSectionOpen] = useState(false);
-  const [isCodeSectionOpen, setIsCodeSectionOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<RoomTab>('code');
   const hasUnsavedCodeChanges = code !== battle.current_user_code;
   const isMutating =
     isSaving ||
     isConfirmingCode ||
+    isConfirmingMap ||
+    isCreatingRematch ||
     isRerollingMap ||
     isSubmitting ||
     isSavingResult;
@@ -375,6 +435,10 @@ export function PrivateBattleRoomClient({
     isLeftUser ?
       battle.right_map_change_requested
     : battle.left_map_change_requested;
+  const currentUserMapConfirmed =
+    isLeftUser ? battle.left_map_confirmed : battle.right_map_confirmed;
+  const opponentMapConfirmed =
+    isLeftUser ? battle.right_map_confirmed : battle.left_map_confirmed;
   const isLocked = battle.can_view_battle;
   const currentMapConfig = normalizeArenaMapConfig(
     battle.map_config,
@@ -419,21 +483,26 @@ export function PrivateBattleRoomClient({
     });
   };
 
-  const handleConfirmCode = () => {
+  const handleSaveAndConfirmCode = () => {
     setErrorMessage(null);
     setStatusMessage(null);
     setIsConfirmingCode(true);
 
     startTransition(async () => {
       try {
-        const nextBattle = await confirmPrivateBattleCodeAction(battle.id);
+        const savedBattle =
+          hasUnsavedCodeChanges ?
+            await savePrivateBattleCodeAction(battle.id, code)
+          : battle;
+        const nextBattle = await confirmPrivateBattleCodeAction(savedBattle.id);
         setBattle(nextBattle);
+        setCode(nextBattle.current_user_code);
         setStatusMessage(
-          'Код подтверждён. Теперь можно либо сменить карту, либо подтвердить готовность.',
+          'Код сохранён и подтверждён. Теперь можно подтвердить готовность.',
         );
       } catch {
         setErrorMessage(
-          'Не удалось подтвердить код. Сначала сохраните непустой код.',
+          'Не удалось сохранить и подтвердить код. Проверьте, что код не пустой.',
         );
       } finally {
         setIsConfirmingCode(false);
@@ -441,9 +510,7 @@ export function PrivateBattleRoomClient({
     });
   };
 
-  const handleRerollMap = (e: MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-
+  const handleRerollMap = () => {
     setErrorMessage(null);
     setStatusMessage(null);
     setIsRerollingMap(true);
@@ -467,9 +534,29 @@ export function PrivateBattleRoomClient({
     });
   };
 
-  const handleMarkReady = (e: MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
+  const handleConfirmMap = () => {
+    setErrorMessage(null);
+    setStatusMessage(null);
+    setIsConfirmingMap(true);
 
+    startTransition(async () => {
+      try {
+        const nextBattle = await confirmPrivateBattleMapAction(battle.id);
+        setBattle(nextBattle);
+        setStatusMessage(
+          'Карта подтверждена. Теперь можно отмечать готовность.',
+        );
+      } catch {
+        setErrorMessage(
+          'Не удалось подтвердить карту. Возможно, комната уже заблокирована.',
+        );
+      } finally {
+        setIsConfirmingMap(false);
+      }
+    });
+  };
+
+  const handleMarkReady = () => {
     setErrorMessage(null);
     setStatusMessage(null);
     setIsSubmitting(true);
@@ -489,6 +576,28 @@ export function PrivateBattleRoomClient({
         );
       } finally {
         setIsSubmitting(false);
+      }
+    });
+  };
+
+  const handleCreateRematch = () => {
+    if (!opponentUsername) {
+      return;
+    }
+
+    setErrorMessage(null);
+    setStatusMessage(null);
+    setIsCreatingRematch(true);
+
+    startTransition(async () => {
+      try {
+        await createPrivateBattleAction(opponentUsername);
+        router.push('/private-battles');
+      } catch {
+        setErrorMessage(
+          'Не удалось отправить приглашение на реванш. Возможно, между вами уже есть открытая комната или активный инвайт.',
+        );
+        setIsCreatingRematch(false);
       }
     });
   };
@@ -515,273 +624,321 @@ export function PrivateBattleRoomClient({
       }
     : null;
 
+  useEffect(() => {
+    if (battle.can_view_battle && battle.left_code && battle.right_code) {
+      setActiveTab('battle');
+      return;
+    }
+
+    if (activeTab === 'battle') {
+      setActiveTab('code');
+    }
+  }, [activeTab, battle.can_view_battle, battle.left_code, battle.right_code]);
+
+  const roomTabs: Array<{
+    id: RoomTab;
+    label: string;
+    icon: typeof CurlyBraces;
+    disabled?: boolean;
+  }> = [
+    { id: 'code', label: 'Код и API', icon: CurlyBraces, disabled: isLocked },
+    { id: 'map', label: 'Карта', icon: Map, disabled: isLocked },
+    {
+      id: 'battle',
+      label: 'Просмотр боя',
+      icon: Swords,
+      disabled: !viewerBattle,
+    },
+  ];
+
   return (
-    <div className='max-w-7xl mx-auto px-4 py-6'>
-      <div className='mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between'>
-        <div>
-          <div className='flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-indigo-600'>
-            <Swords className='h-3.5 w-3.5' />
-            Приватный бой
+    <div className='mx-auto max-w-7xl px-4 py-6'>
+      <div className='mb-5 rounded-2xl border border-slate-200 bg-white/85 p-5 shadow-sm'>
+        <div className='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
+          <div className='min-w-0'>
+            <div className='flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-indigo-600'>
+              <Swords className='h-3.5 w-3.5' />
+              Приватный бой
+            </div>
+            <h1 className='mt-2 truncate text-2xl font-bold text-slate-950'>
+              {battle.title}
+            </h1>
+            <p className='mt-1 text-sm text-slate-600'>
+              Комната #{battle.id} · карта v{battle.map_revision}
+            </p>
           </div>
-          <h1 className='mt-2 text-2xl font-bold text-slate-950'>
-            {battle.title}
-          </h1>
-          <p className='mt-1 text-sm text-slate-600'>
-            Комната #{battle.id}. Карта случайная, её можно менять до финальной
-            готовности. Бой в комнате ровно один.
-          </p>
-          {battle.finished_at && (
-            <p className='mt-1 text-xs text-slate-500'>Результат сохранён.</p>
-          )}
+
+          <div className='flex flex-wrap gap-2'>
+            <Link
+              href='/private-battles'
+              className='inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50'
+            >
+              К списку
+            </Link>
+            {battle.has_result && (
+              <button
+                type='button'
+                onClick={handleCreateRematch}
+                disabled={isCreatingRematch}
+                className='inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50'
+              >
+                <Swords className='h-4 w-4' />
+                {isCreatingRematch ? 'Создание...' : 'Реванш'}
+              </button>
+            )}
+          </div>
         </div>
 
-        <Link
-          href='/private-battles'
-          className='inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50'
-        >
-          Вернуться к списку
-        </Link>
-      </div>
-
-      <div className='mb-6 grid gap-3 lg:grid-cols-2'>
-        <div className='rounded-xl border border-slate-200 bg-white/80 p-4 shadow-sm'>
-          <UserCard
-            title={'Вы'}
+        <div className='mt-5 grid gap-3 lg:grid-cols-2'>
+          <PlayerStatusCard
+            title='Вы'
             userName={currentUserName || ''}
             userUsername={currentUserUsername || ''}
             isCodeApplied={currentUserCodeConfirmed}
             isMapChangeRequested={currentUserMapChangeRequested}
+            isMapConfirmed={currentUserMapConfirmed}
             isUserReady={currentUserReady}
           />
-        </div>
-
-        <div className='rounded-xl border border-slate-200 bg-white/80 p-4 shadow-sm'>
-          <UserCard
-            title={'Соперник'}
+          <PlayerStatusCard
+            title='Соперник'
             userName={opponentName || ''}
             userUsername={opponentUsername || ''}
             isCodeApplied={opponentCodeConfirmed}
             isMapChangeRequested={opponentMapChangeRequested}
+            isMapConfirmed={opponentMapConfirmed}
             isUserReady={opponentReady}
           />
         </div>
-      </div>
 
-      <div className='mb-6 rounded-2xl border border-slate-200 bg-white/80 shadow-sm'>
-        <div
-          onClick={() => setIsMapSectionOpen((value) => !value)}
-          className='flex w-full items-center justify-between gap-3 px-4 py-3 text-left'
-        >
-          <div>
-            <div className='text-sm font-semibold text-slate-900'>
-              Случайная карта
-            </div>
-            <div className='mt-1 text-sm text-slate-600'>
-              Версия карты #{battle.map_revision}. Карта сменится только если
-              оба игрока прожмут запрос на смену.
-            </div>
-          </div>
-          <div className='flex gap-8 items-center'>
-            {!isLocked && (
-              <button
-                type='button'
-                onClick={(e) => handleRerollMap(e)}
-                disabled={
-                  isSaving ||
-                  isConfirmingCode ||
-                  isSubmitting ||
-                  isRerollingMap ||
-                  isRunning ||
-                  currentUserMapChangeRequested ||
-                  (currentUserReady && !opponentMapChangeRequested)
-                }
-                className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50'
-              >
-                <RefreshCw className='h-4 w-4' />
-                {isRerollingMap ?
-                  'Отправка...'
-                : currentUserMapChangeRequested ?
-                  'Ожидаем второго'
-                : 'Запросить смену карты'}
-              </button>
+        {(statusMessage || errorMessage) && (
+          <div className='mt-4 space-y-2 text-sm'>
+            {statusMessage && (
+              <p className='rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-700'>
+                {statusMessage}
+              </p>
             )}
-            <ChevronDown
-              className={cn(
-                'h-4 w-4 shrink-0 text-slate-500 transition-transform',
-                isMapSectionOpen && 'rotate-180',
-              )}
-            />
+            {errorMessage && (
+              <p className='rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700'>
+                {errorMessage}
+              </p>
+            )}
           </div>
-        </div>
-
-        <div
-          className={cn(
-            'grid overflow-hidden transition-all duration-200 ease-out',
-            isMapSectionOpen ?
-              'grid-rows-[1fr] opacity-100'
-            : 'grid-rows-[0fr] opacity-0',
-          )}
-        >
-          <div className='min-h-0'>
-            <div className='px-4 pb-4'>
-              <div className='flex justify-center'>
-                <GameBoard field={currentMapConfig.grid} />
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
-      <div className='mb-6 rounded-2xl border border-slate-200 bg-white/80 shadow-sm'>
-        <div
-          onClick={() => setIsCodeSectionOpen((value) => !value)}
-          className='flex w-full items-center justify-between gap-3 px-4 py-3 text-left'
-        >
-          <div>
-            <div className='text-sm font-semibold text-slate-900'>
-              Ваш код для комнаты
-            </div>
-            <div className='mt-1 text-sm text-slate-600'>
-              {isLocked ?
-                'Бой уже зафиксирован. Эта комната доступна только для просмотра симуляции и результата.'
-              : 'Изменение кода снимает подтверждение кода и готовность. После подтверждения кода можно менять карту или подтверждать готовность.'
-              }
-            </div>
-          </div>
+      <div className='mb-5 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white/85 p-2 shadow-sm'>
+        {roomTabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
 
-          <div className='flex gap-8 items-center'>
+          return (
             <button
+              key={tab.id}
               type='button'
-              onClick={(e) => handleMarkReady(e)}
-              disabled={
-                isSaving ||
-                isConfirmingCode ||
-                isSubmitting ||
-                isRerollingMap ||
-                isRunning ||
-                !currentUserCodeConfirmed ||
-                currentUserReady
-              }
-              className='inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50'
-            >
-              <Send className='h-4 w-4' />
-              {isSubmitting ? 'Подтверждение...' : 'Я готов'}
-            </button>
-            <ChevronDown
+              disabled={tab.disabled}
+              onClick={() => setActiveTab(tab.id)}
               className={cn(
-                'h-4 w-4 shrink-0 text-slate-500 transition-transform',
-                isCodeSectionOpen && 'rotate-180',
+                'inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-45',
+                isActive ?
+                  'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950',
               )}
+            >
+              <Icon className='h-4 w-4' />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === 'code' && !isLocked && (
+        <div className='grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]'>
+          <div>
+            <div className='mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between'>
+              <div>
+                <h2 className='text-base font-semibold text-slate-950'>
+                  Код для боя
+                </h2>
+              </div>
+
+              <div className='flex flex-wrap gap-2'>
+                <button
+                  type='button'
+                  onClick={handleSaveCode}
+                  disabled={isSaving || isSubmitting || isRunning}
+                  className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50'
+                >
+                  <Save className='h-4 w-4' />
+                  {isSaving ? 'Сохранение...' : 'Сохранить'}
+                </button>
+                <button
+                  type='button'
+                  onClick={handleSaveAndConfirmCode}
+                  disabled={
+                    isSaving ||
+                    isConfirmingCode ||
+                    isConfirmingMap ||
+                    isSubmitting ||
+                    isRerollingMap ||
+                    isRunning ||
+                    code.trim().length === 0 ||
+                    (currentUserCodeConfirmed && !hasUnsavedCodeChanges)
+                  }
+                  className='inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50'
+                >
+                  <CheckCircle2 className='h-4 w-4' />
+                  {isConfirmingCode ?
+                    'Подтверждение...'
+                  : 'Сохранить и подтвердить'}
+                </button>
+                <button
+                  type='button'
+                  onClick={handleMarkReady}
+                  disabled={
+                    isSaving ||
+                    isConfirmingCode ||
+                    isConfirmingMap ||
+                    isSubmitting ||
+                    isRerollingMap ||
+                    isRunning ||
+                    !currentUserCodeConfirmed ||
+                    !currentUserMapConfirmed ||
+                    currentUserReady
+                  }
+                  className='inline-flex items-center gap-2 rounded-lg border border-indigo-700 bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50'
+                >
+                  <Send className='h-4 w-4' />
+                  {isSubmitting ? 'Подтверждение...' : 'Я готов'}
+                </button>
+              </div>
+            </div>
+
+            <ScriptEditor
+              playerLabel='Мой алгоритм для приватного боя'
+              playerEmoji={isLeftUser ? '🔴' : '🟢'}
+              script={code}
+              onScriptChange={setCode}
+              disabled={isRunning || isLocked}
             />
           </div>
+
+          <aside className='space-y-4 xl:sticky xl:top-20 xl:self-start'>
+            <OperatorApiReference />
+          </aside>
         </div>
+      )}
 
-        <div
-          className={cn(
-            'grid overflow-hidden transition-all duration-200 ease-out',
-            isCodeSectionOpen ?
-              'grid-rows-[1fr] opacity-100'
-            : 'grid-rows-[0fr] opacity-0',
-          )}
-        >
-          <div className='min-h-0'>
-            <div className='px-4 pb-4'>
-              {!isLocked && (
-                <div className='mb-4 flex flex-wrap gap-2'>
-                  <button
-                    type='button'
-                    onClick={handleSaveCode}
-                    disabled={isSaving || isSubmitting || isRunning}
-                    className='inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50'
-                  >
-                    <Save className='h-4 w-4' />
-                    {isSaving ? 'Сохранение...' : 'Сохранить код'}
-                  </button>
-                  <button
-                    type='button'
-                    onClick={handleConfirmCode}
-                    disabled={
-                      isSaving ||
-                      isConfirmingCode ||
-                      isSubmitting ||
-                      isRerollingMap ||
-                      isRunning ||
-                      code.trim().length === 0 ||
-                      currentUserCodeConfirmed
-                    }
-                    className='inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50'
-                  >
-                    <CheckCircle2 className='h-4 w-4' />
-                    {isConfirmingCode ? 'Подтверждение...' : 'Подтвердить код'}
-                  </button>
-                </div>
-              )}
+      {activeTab === 'map' && (
+        <div className='rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm'>
+          <div className='mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
+            <div>
+              <h2 className='text-base font-semibold text-slate-950'>Карта</h2>
+              <p className='mt-1 text-sm text-slate-600'>
+                Версия #{battle.map_revision}
+              </p>
+            </div>
 
-              {(statusMessage || errorMessage) && (
-                <div className='mb-4 space-y-2 text-sm'>
-                  {statusMessage && (
-                    <p className='text-emerald-700'>{statusMessage}</p>
-                  )}
-                  {errorMessage && (
-                    <p className='text-rose-700'>{errorMessage}</p>
-                  )}
-                </div>
-              )}
+            {!isLocked && (
+              <div className='flex flex-wrap gap-2'>
+                <button
+                  type='button'
+                  onClick={handleConfirmMap}
+                  disabled={
+                    isSaving ||
+                    isConfirmingCode ||
+                    isConfirmingMap ||
+                    isSubmitting ||
+                    isRerollingMap ||
+                    isRunning ||
+                    currentUserMapConfirmed
+                  }
+                  className='inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50'
+                >
+                  <CheckCircle2 className='h-4 w-4' />
+                  {isConfirmingMap ?
+                    'Подтверждение...'
+                  : currentUserMapConfirmed ?
+                    'Карта подтверждена'
+                  : 'Подтвердить карту'}
+                </button>
+                <button
+                  type='button'
+                  onClick={handleRerollMap}
+                  disabled={
+                    isSaving ||
+                    isConfirmingCode ||
+                    isConfirmingMap ||
+                    isSubmitting ||
+                    isRerollingMap ||
+                    isRunning ||
+                    currentUserMapChangeRequested ||
+                    (currentUserReady && !opponentMapChangeRequested)
+                  }
+                  className='inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50'
+                >
+                  <RefreshCw className='h-4 w-4' />
+                  {isRerollingMap ?
+                    'Отправка...'
+                  : currentUserMapChangeRequested ?
+                    'Ожидаем'
+                  : 'Сменить карту'}
+                </button>
+              </div>
+            )}
+          </div>
 
-              <ScriptEditor
-                playerLabel='Мой алгоритм для приватного боя'
-                playerEmoji={isLeftUser ? '🔴' : '🟢'}
-                script={code}
-                onScriptChange={setCode}
-                disabled={isRunning || isLocked}
-              />
+          <div className='overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-4'>
+            <div className='flex justify-center'>
+              <GameBoard field={currentMapConfig.grid} />
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {viewerBattle ?
-        <div className='flex flex-col gap-6 xl:flex-row'>
-          <div className='flex-1 flex items-start justify-center'>
-            <GameBoard field={field} />
-          </div>
-
-          <div className='xl:w-72 flex flex-col gap-4'>
-            <ControlPanel
-              canManageArena={false}
-              isRunning={isRunning}
-              currentStep={currentStep}
-              histories={histories}
-              mapType={mapType}
-              speedIndex={speedIndex}
-              result={displayedResult}
-              mapWidth={mapWidth}
-              mapHeight={mapHeight}
-              gameMode={gameMode}
-              activeBattle={viewerBattle}
-              onToggle={togglePlayback}
-              onReset={reset}
-              onStepBackward={stepBackward}
-              onStepForward={stepForward}
-              onSetStep={setStep}
-              onSpeedChange={setSpeedIndex}
-            />
-
-            {scriptError && (
-              <div className='bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-xl text-sm shadow-sm'>
-                {scriptError}
+      {activeTab === 'battle' &&
+        (viewerBattle ?
+          <div className='grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]'>
+            <div className='rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm'>
+              <div className='flex justify-center'>
+                <GameBoard field={field} />
               </div>
-            )}
+            </div>
 
-            <EventLog messages={messages} />
-            <ArenaLegend />
+            <div className='flex flex-col gap-4'>
+              <ControlPanel
+                canManageArena={false}
+                isRunning={isRunning}
+                currentStep={currentStep}
+                histories={histories}
+                mapType={mapType}
+                speedIndex={speedIndex}
+                result={displayedResult}
+                mapWidth={mapWidth}
+                mapHeight={mapHeight}
+                gameMode={gameMode}
+                activeBattle={viewerBattle}
+                onToggle={togglePlayback}
+                onReset={reset}
+                onStepBackward={stepBackward}
+                onStepForward={stepForward}
+                onSetStep={setStep}
+                onSpeedChange={setSpeedIndex}
+              />
+
+              {scriptError && (
+                <div className='rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 shadow-sm'>
+                  {scriptError}
+                </div>
+              )}
+
+              <EventLog messages={messages} />
+              <ArenaLegend />
+            </div>
           </div>
-        </div>
-      : <div className='rounded-2xl border border-dashed border-slate-300 bg-white/60 px-5 py-6 text-sm text-slate-600 shadow-sm'>
-          Бой откроется здесь, когда оба участника сохранят код и подтвердят
-          готовность.
-        </div>
-      }
+        : <div className='rounded-2xl border border-dashed border-slate-300 bg-white/60 px-5 py-6 text-sm text-slate-600 shadow-sm'>
+            Бой откроется здесь, когда оба участника сохранят код и подтвердят
+            готовность.
+          </div>)}
     </div>
   );
 }

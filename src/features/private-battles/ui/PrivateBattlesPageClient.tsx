@@ -1,13 +1,18 @@
-import type { PrivateBattleListItem } from '@/src/shared/lib/api/internal';
+import type {
+  PrivateBattleInviteItem,
+  PrivateBattleListItem,
+} from '@/src/shared/lib/api/internal';
 
 import { PrivateBattlesPanel } from './PrivateBattlesPanel';
 
 export function PrivateBattlesPageClient({
   currentUsername,
   initialBattles,
+  initialInvites,
 }: {
   currentUsername: string;
   initialBattles: PrivateBattleListItem[];
+  initialInvites: PrivateBattleInviteItem[];
 }) {
   return (
     <div className='max-w-7xl mx-auto px-4 py-6'>
@@ -21,6 +26,7 @@ export function PrivateBattlesPageClient({
       <PrivateBattlesPanel
         currentUsername={currentUsername}
         initialBattles={initialBattles}
+        initialInvites={initialInvites}
       />
     </div>
   );

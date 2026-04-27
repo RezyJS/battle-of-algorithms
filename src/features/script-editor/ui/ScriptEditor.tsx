@@ -2,6 +2,14 @@
 
 import { JavaScriptCodeEditor } from '@/src/shared/ui/JavaScriptCodeEditor';
 import { algorithmTemplates, AlgorithmTemplateName } from '../model/templates';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select';
 
 interface ScriptTemplateSelectProps {
   disabled: boolean;
@@ -29,27 +37,29 @@ export function ScriptTemplateSelect({
   };
 
   return (
-    <select
-      className='text-xs px-2 py-1 rounded-md bg-white border border-slate-300 text-slate-700 focus:outline-none focus:border-indigo-500'
-      onChange={(e) => handleLoadTemplate(e.target.value)}
+    <Select
       disabled={disabled}
-      defaultValue=''
+      onValueChange={handleLoadTemplate}
     >
-      <option
-        value=''
-        disabled
+      <SelectTrigger
+        size='sm'
+        className='w-[190px] bg-white'
       >
-        Загрузить шаблон...
-      </option>
-      {Object.entries(algorithmTemplates).map(([key, tmpl]) => (
-        <option
-          key={key}
-          value={key}
-        >
-          {tmpl.name}
-        </option>
-      ))}
-    </select>
+        <SelectValue placeholder='Загрузить шаблон...' />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          {Object.entries(algorithmTemplates).map(([key, tmpl]) => (
+            <SelectItem
+              key={key}
+              value={key}
+            >
+              {tmpl.name}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
   );
 }
 
