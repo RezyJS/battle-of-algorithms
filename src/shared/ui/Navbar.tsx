@@ -1,6 +1,5 @@
 'use client';
 
-import type { FormEvent } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -90,7 +89,8 @@ export function Navbar({ currentUser }: { currentUser: SessionUser | null }) {
     currentUser ? '/private-battles' : (
       '/api/auth/login?returnTo=/private-battles'
     );
-  const handleLogoutSubmit = (event: FormEvent<HTMLFormElement>) => {
+
+  const handleLogoutSubmit = (event: { preventDefault: () => void }) => {
     if (!window.confirm('Вы точно хотите выйти из аккаунта?')) {
       event.preventDefault();
     }
@@ -114,24 +114,28 @@ export function Navbar({ currentUser }: { currentUser: SessionUser | null }) {
               icon={Home}
               active={isActive(pathname, '/')}
             />
-            <NavLink
-              href={editorHref}
-              label='Редактор'
-              icon={Code2}
-              active={isActive(pathname, '/editor')}
-            />
-            <NavLink
-              href='/arena'
-              label='Арена'
-              icon={Swords}
-              active={isActive(pathname, '/arena')}
-            />
-            <NavLink
-              href={privateBattlesHref}
-              label='Приватные сражения'
-              icon={Users}
-              active={isActive(pathname, '/private-battles')}
-            />
+            {currentUser ?
+              <>
+                <NavLink
+                  href={editorHref}
+                  label='Редактор'
+                  icon={Code2}
+                  active={isActive(pathname, '/editor')}
+                />
+                <NavLink
+                  href='/arena'
+                  label='Арена'
+                  icon={Swords}
+                  active={isActive(pathname, '/arena')}
+                />
+                <NavLink
+                  href={privateBattlesHref}
+                  label='Приватные сражения'
+                  icon={Users}
+                  active={isActive(pathname, '/private-battles')}
+                />
+              </>
+            : <></>}
             <NavLink
               href='/rules'
               label='Правила'
